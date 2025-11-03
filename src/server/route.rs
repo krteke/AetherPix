@@ -1,5 +1,3 @@
-#[cfg(feature = "server")]
-
 pub mod client {
     use crate::views::*;
     use dioxus::prelude::*;

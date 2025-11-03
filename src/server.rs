@@ -12,6 +12,8 @@ pub use handlers::login_handler;
 pub use handlers::verify_token_handler;
 #[cfg(feature = "server")]
 pub use middleware::auth_middleware;
+#[cfg(feature = "server")]
+pub use middleware::cookie_cleanup_middleware;
 pub use route::client::Route;
 #[cfg(feature = "server")]
 pub use route::server::router;

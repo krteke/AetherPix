@@ -1,3 +1,4 @@
+use crate::utils::get_browser_origin;
 use crate::{
     components::{Dialog, InlineSvg},
     models::LoginInfo,
@@ -5,7 +6,6 @@ use crate::{
 };
 use dioxus::prelude::*;
 use futures::StreamExt;
-use crate::utils::get_browser_origin;
 
 const EYE_SHOW_ICON: &str = include_str!("../../assets/svg/eye-show.svg");
 const EYE_OFF_ICON: &str = include_str!("../../assets/svg/eye-off.svg");
@@ -30,13 +30,7 @@ pub fn Login() -> Element {
     let eye_class =
         "absolute w-5 h-5 text-white select-none transition-opacity duration-200 ease-in-out";
 
-    let login_disabled = if is_verifying() {
-        "disabled cursor-not-allowed opacity-50"
-    } else {
-        ""
-    };
-
-    let on_login_success = use_callback(move |token: String| {
+    let on_login_success = use_callback(move |_| {
         tracing::info!("Login successful");
         navigator.push(Route::Home {});
     });
@@ -50,6 +44,8 @@ pub fn Login() -> Element {
             tracing::debug!("{}", base_url);
 
             while let Some(action) = rx.next().await {
+                is_verifying.set(true);
+
                 let request_url = format!("{}/api/login", base_url);
                 let response = client.post(&request_url).json(&action).send().await;
                 tracing::debug!("response: {:?}", response);
@@ -57,12 +53,17 @@ pub fn Login() -> Element {
                 match response {
                     Ok(resp) => {
                         if resp.status().is_success() {
-                            on_login_success.call("success".to_string());
+                            on_login_success.call(());
                         } else {
                             let status = resp.status();
                             let text = resp.text().await.unwrap_or_default();
-                            error_message
-                                .set(format!("登录失败! 状态码: {}, 信息: {}", status, text));
+
+                            let error_text = match status.as_u16() {
+                                401 | 403 => "用户名或密码错误".to_string(),
+                                _ => format!("登录失败! 状态码: {}, 信息: {}", status, text),
+                            };
+
+                            error_message.set(error_text);
                             is_open.set(true);
                         }
                     }
@@ -71,6 +72,8 @@ pub fn Login() -> Element {
                         is_open.set(true);
                     }
                 }
+
+                is_verifying.set(false);
             }
         }
     });
@@ -137,8 +140,8 @@ pub fn Login() -> Element {
                         r#type: "submit",
                         class: "w-full py-3.5 px-5 rounded-lg text-[16px] font-semibold cursor-pointer mt-6
                         text-center self-center relative overflow-hidden bg-[#3498db] hover:brightness-110
-                        active:scale-[0.98] active:brightness-90 text-white transition-all duration-200 ease-in-out
-                        {login_disabled}",
+                        active:scale-[0.98] active:brightness-90 text-white transition-all duration-200 ease-in-out",
+                        disabled: is_verifying(),
                         onclick: move |_| async move {
                             if is_username_empty() {
                                 error_message.set("用户名不能为空!".to_string());
@@ -147,13 +150,11 @@ pub fn Login() -> Element {
                                 error_message.set("密码不能为空!".to_string());
                                 is_open.set(true);
                             } else {
-                                is_verifying.set(true);
                                 let login_info = LoginInfo {
                                     username: username.to_string(),
                                     password: password.to_string(),
                                 };
                                 login_coroutine.send(login_info);
-                                is_verifying.set(false);
                             }
                         },
                         "登录"

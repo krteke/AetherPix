@@ -29,11 +29,16 @@ fn main() {
 async fn launch_server(component: fn() -> Element) {
     use std::sync::Arc;
 
-    use crate::{config::Config, server::router, state::app::AppState};
+    use crate::{
+        config::Config,
+        server::{cookie_cleanup_middleware, router},
+        state::app::AppState,
+    };
 
     dotenvy::dotenv().ok();
 
     create_tracing_subscriber();
+    tracing::debug!("Created tracing subscriber");
 
     let config = Config::load_config();
     let app_state = Arc::new(AppState::new(config));
@@ -44,9 +49,12 @@ async fn launch_server(component: fn() -> Element) {
 
     let router = router(app_state)
         .serve_dioxus_application(ServeConfig::default(), component)
+        .layer(axum::middleware::from_fn(cookie_cleanup_middleware))
         .into_make_service();
 
     axum::serve(listener, router).await.unwrap();
+
+    tracing::debug!("Server started");
 }
 
 #[cfg(feature = "server")]
