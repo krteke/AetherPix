@@ -1,6 +1,4 @@
 #[cfg(feature = "server")]
-mod common;
-#[cfg(feature = "server")]
 mod handlers;
 #[cfg(feature = "server")]
 mod middleware;

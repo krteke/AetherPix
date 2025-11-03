@@ -1,6 +1,6 @@
 use dioxus::prelude::*;
 
-use crate::{server::Route, utils::get_browser_origin};
+use crate::{components::Loading, server::Route, utils::get_browser_origin};
 
 #[component]
 pub fn Home() -> Element {
@@ -41,7 +41,7 @@ pub fn Home() -> Element {
 
     if is_verifying() {
         return rsx! {
-            div {}
+            Loading {}
         };
     }
 
