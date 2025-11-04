@@ -5,13 +5,13 @@ mod middleware;
 mod route;
 
 #[cfg(feature = "server")]
-pub use handlers::login_handler;
+pub(crate) use handlers::login_handler;
 #[cfg(feature = "server")]
-pub use handlers::verify_token_handler;
+pub(crate) use handlers::verify_token_handler;
 #[cfg(feature = "server")]
-pub use middleware::auth_middleware;
+pub(crate) use middleware::auth_middleware;
 #[cfg(feature = "server")]
-pub use middleware::cookie_cleanup_middleware;
-pub use route::client::Route;
+pub(crate) use middleware::cookie_cleanup_middleware;
+pub(crate) use route::client::Route;
 #[cfg(feature = "server")]
-pub use route::server::router;
+pub(crate) use route::server::router;

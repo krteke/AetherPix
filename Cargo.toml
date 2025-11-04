@@ -37,9 +37,14 @@ aws-config = { version = "1.8.10", features = [
     "behavior-version-latest",
 ], optional = true }
 aws-sdk-s3 = { version = "1.110.0", optional = true }
+uuid = { version = "1.18.1", features = ["v4", "js"] }
 futures = { version = "0.3.31" }
-web-sys = { version = "0.3.82", features = ["Window", "Location"] }
-gloo-storage = { version = "0.3.0" }
+web-sys = { version = "0.3.82", features = [
+    "Window",
+    "Location",
+    "HtmlInputElement",
+    "File"
+] }
 
 [features]
 default = ["web"]

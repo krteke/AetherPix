@@ -1,20 +1,20 @@
-use std::{collections::HashMap, time::Duration};
+use std::{collections::HashMap, sync::Arc, time::Duration};
 
 use aws_sdk_s3::presigning::PresigningConfig;
 use axum::{extract::State, Json};
 use reqwest::StatusCode;
 use serde::Serialize;
 
-use crate::state::app::AppState;
+use crate::{models::PresignRequest, state::app::AppState};
 
 #[derive(Serialize)]
-struct PresignedResponse {
+pub struct PresignedResponse {
     urls: HashMap<String, String>,
 }
 
-async fn presign_upload_handler(
-    State(state): State<AppState>,
-    Json(req): Json<Vec<String>>,
+pub async fn presign_upload_handler(
+    State(state): State<Arc<AppState>>,
+    Json(req): Json<Vec<PresignRequest>>,
 ) -> Result<Json<PresignedResponse>, (StatusCode, String)> {
     let expiration = Duration::from_secs(60 * 10);
 
@@ -30,7 +30,7 @@ async fn presign_upload_handler(
     let mut urls = HashMap::new();
 
     for unique_key in req {
-        let final_r2_key = format!("uploads/{}", unique_key);
+        let final_r2_key = format!("uploads/{}.{}", unique_key.uuid, unique_key.extension);
 
         match state
             .r2_client
@@ -41,7 +41,7 @@ async fn presign_upload_handler(
             .await
         {
             Ok(presigned_req) => {
-                urls.insert(unique_key, presigned_req.uri().to_string());
+                urls.insert(unique_key.uuid, presigned_req.uri().to_string());
             }
             Err(e) => {
                 tracing::error!("Error presigning upload: {}", e);
@@ -54,5 +54,5 @@ async fn presign_upload_handler(
         }
     }
 
-    return Ok(Json(PresignedResponse { urls: urls }));
+    return Ok(Json(PresignedResponse { urls }));
 }

@@ -11,3 +11,9 @@ pub struct Claims {
     pub sub: String,
     pub exp: i64,
 }
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct PresignRequest {
+    pub uuid: String,
+    pub extension: String,
+}
