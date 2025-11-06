@@ -140,9 +140,11 @@ pub fn Login() -> Element {
                     }
                     button {
                         r#type: "submit",
-                        class: "w-full py-3.5 px-5 rounded-lg text-[16px] font-semibold cursor-pointer mt-6
-                        text-center self-center relative overflow-hidden bg-[#3498db] hover:brightness-110
-                        active:scale-[0.98] active:brightness-90 text-white transition-all duration-200 ease-in-out",
+                        class: "w-full py-3.5 px-5 rounded-lg text-[16px] font-semibold mt-6
+                        text-center self-center relative overflow-hidden",
+                        class: if is_verifying() { "bg-gray-400" }
+                            else { "bg-[#3498db] hover:brightness-110 active:scale-[0.98] cursor-pointer
+                                active:brightness-90 text-white transition-all duration-200 ease-in-out" },
                         disabled: is_verifying(),
                         onclick: move |_| async move {
                             if is_username_empty() {

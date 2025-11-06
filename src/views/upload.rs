@@ -18,7 +18,8 @@ pub type FileMap = HashMap<Uuid, FileData>;
 pub fn Upload() -> Element {
     const INPUT_FILE_ID: &str = "file-picker";
     let mut uploaded_files = use_signal(|| FileMap::new());
-    let mut is_presign_failed = use_signal(|| false);
+    let mut presign_success = use_signal(|| false);
+    let mut open_dialog = use_signal(|| false);
 
     let on_file_change = move |e: Event<FormData>| {
         let file_list = e.files();
@@ -70,15 +71,18 @@ pub fn Upload() -> Element {
                     tracing::debug!("{:#?}", res);
 
                     if res.status().is_success() {
-                        is_presign_failed.set(false);
+                        presign_success.set(true);
+                        open_dialog.set(false);
                     } else {
-                        is_presign_failed.set(true);
+                        presign_success.set(false);
+                        open_dialog.set(true);
                     }
                 }
                 Err(e) => {
                     tracing::error!("Failed to presign files: {}", e);
 
-                    is_presign_failed.set(true);
+                    presign_success.set(false);
+                    open_dialog.set(true);
                 }
             }
         });
@@ -88,7 +92,7 @@ pub fn Upload() -> Element {
     rsx! {
         AuthGuard {
             Dialog{
-                open: is_presign_failed,
+                open: open_dialog,
                 title: "预签名失败",
                 description: "预签名失败，请重试"
             }
@@ -133,8 +137,22 @@ pub fn Upload() -> Element {
                         accept: "image/*",
                         onchange: on_file_change,
                     }
+                    button {
+                        class: "ml-4 px-6 py-3 bg-blue-600 text-white rounded-lg transition-colors",
+                        class: if presign_success() { "bg-blue-600 cursor-pointer hover:bg-blue-700"}
+                            else { "bg-gray-300" },
+                        disabled: !presign_success(),
+                        onclick: move |_| {
+
+                        },
+                        "上传"
+                    }
                 }
             }
         }
     }
+}
+
+async fn upload(urls: HashMap<String, String>, files: FileMap) -> Result<(), String> {
+    todo!()
 }
