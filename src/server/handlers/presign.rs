@@ -3,14 +3,11 @@ use std::{collections::HashMap, sync::Arc, time::Duration};
 use aws_sdk_s3::presigning::PresigningConfig;
 use axum::{extract::State, Json};
 use reqwest::StatusCode;
-use serde::Serialize;
 
-use crate::{models::PresignRequest, state::app::AppState};
-
-#[derive(Serialize)]
-pub struct PresignedResponse {
-    urls: HashMap<String, String>,
-}
+use crate::{
+    models::{PresignRequest, PresignedResponse},
+    state::app::AppState,
+};
 
 pub async fn presign_upload_handler(
     State(state): State<Arc<AppState>>,
@@ -23,7 +20,7 @@ pub async fn presign_upload_handler(
 
         (
             StatusCode::INTERNAL_SERVER_ERROR,
-            format!("Failed to create presigning config."),
+            "Failed to create presigning config.".to_string(),
         )
     })?;
 
@@ -48,11 +45,11 @@ pub async fn presign_upload_handler(
 
                 return Err((
                     StatusCode::INTERNAL_SERVER_ERROR,
-                    format!("Error presigning upload."),
+                    "Error presigning upload.".to_string(),
                 ));
             }
         }
     }
 
-    return Ok(Json(PresignedResponse { urls }));
+    Ok(Json(PresignedResponse { urls }))
 }

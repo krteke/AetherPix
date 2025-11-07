@@ -1,4 +1,5 @@
 mod auth_guard;
+mod copy_link;
 mod dialog;
 mod dialog_component;
 mod image_gallery;
@@ -8,6 +9,7 @@ mod route_button;
 
 pub(crate) use auth_guard::AuthGuard;
 pub(crate) use dialog_component::Dialog;
+pub(crate) use image_gallery::get_web_file;
 pub(crate) use image_gallery::ImageGallery;
 pub(crate) use inline_svg::InlineSvg;
 pub(crate) use loading::Loading;

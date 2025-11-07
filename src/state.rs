@@ -12,6 +12,7 @@ pub mod app {
         pub jwt_secret: SecretString,
         pub r2_client: Client,
         pub r2_bucket: String,
+        pub r2_url: String,
     }
 
     impl AppState {
@@ -35,6 +36,7 @@ pub mod app {
                 jwt_secret: config.jwt_secret,
                 r2_client,
                 r2_bucket: config.r2_bucket_name,
+                r2_url: config.r2_url,
             }
         }
     }

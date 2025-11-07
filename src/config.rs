@@ -8,6 +8,7 @@ pub struct Config {
     pub r2_account_id: String,
     pub r2_region: String,
     pub r2_bucket_name: String,
+    pub r2_url: String,
 }
 
 impl Config {
@@ -26,6 +27,7 @@ impl Config {
         let r2_region = std::env::var("R2_REGION").expect("R2_REGION environment variable not set");
         let r2_bucket_name =
             std::env::var("R2_BUCKET_NAME").expect("R2_BUCKET_NAME environment variable not set");
+        let r2_url = std::env::var("R2_URL").expect("R2_URL environment variable not set");
 
         Config {
             username,
@@ -34,6 +36,7 @@ impl Config {
             r2_account_id,
             r2_region,
             r2_bucket_name,
+            r2_url,
         }
     }
 }

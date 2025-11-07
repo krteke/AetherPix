@@ -35,7 +35,7 @@ pub async fn login_handler(
         let token = match encode(
             &Header::default(),
             &claims,
-            &EncodingKey::from_secret(&state.jwt_secret.expose_secret().as_bytes()),
+            &EncodingKey::from_secret(state.jwt_secret.expose_secret().as_bytes()),
         ) {
             Ok(token) => token,
             Err(e) => {
@@ -65,10 +65,10 @@ fn is_valid_user(state: &Arc<AppState>, info: &LoginInfo) -> bool {
     let is_valid_password = verify_password(&info.password, &state.password);
 
     match is_valid_password {
-        Ok(valid) => return valid && is_valid_username,
+        Ok(valid) => valid && is_valid_username,
         Err(e) => {
             tracing::error!("Error verifying password: {}", e);
-            return false;
+            false
         }
     }
 }
@@ -88,9 +88,9 @@ fn verify_username(expected: &SecretString, provided: &str) -> bool {
 
     if !username_eq {
         tracing::debug!("Username verification failed");
-        return false;
+        false
     } else {
-        return true;
+        true
     }
 }
 
@@ -102,7 +102,7 @@ fn verify_password(password: &str, hashed_password: &SecretString) -> Result<boo
 
     let parsed_hash = PasswordHash::new(hashed_password.expose_secret()).map_err(|e| {
         tracing::debug!("{}", e);
-        return anyhow::anyhow!("Failed to parse password hash: {}", e);
+        anyhow::anyhow!("Failed to parse password hash: {}", e)
     })?;
 
     let verification_result = Argon2::default().verify_password(password, &parsed_hash);

@@ -25,7 +25,13 @@ pub mod server {
     use dioxus::server::FullstackState;
     use std::sync::Arc;
 
-    use crate::{server::{handlers::presign_upload_handler, login_handler}, state::app::AppState};
+    use crate::{
+        server::{
+            handlers::{presign_upload_handler, r2_url_handler},
+            login_handler,
+        },
+        state::app::AppState,
+    };
 
     pub fn router(app_state: Arc<AppState>) -> Router<FullstackState> {
         use axum::routing::get;
@@ -35,6 +41,7 @@ pub mod server {
         let protected_route = axum::Router::new()
             .route("/verify", get(verify_token_handler))
             .route("/presign", post(presign_upload_handler))
+            .route("/r2url", post(r2_url_handler))
             .route_layer(axum::middleware::from_fn_with_state(
                 app_state.clone(),
                 auth_middleware,

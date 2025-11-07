@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -12,8 +14,13 @@ pub struct Claims {
     pub exp: i64,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct PresignRequest {
     pub uuid: String,
     pub extension: String,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct PresignedResponse {
+    pub urls: HashMap<String, String>,
 }
