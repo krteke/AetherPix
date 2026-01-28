@@ -4,6 +4,25 @@
 		<meta charset="utf-8" />
 		<link rel="icon" href="%sveltekit.assets%/favicon.svg" />
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<meta name="color-scheme" content="light dark" />
+
+		<script nonce="%sveltekit.nonce%">
+			(function () {
+				const storedTheme = localStorage.getItem('theme');
+				const preferredTheme = window.matchMedia('(prefers-color-scheme: dark)').matches
+					? 'dark'
+					: 'light';
+				const theme = storedTheme || preferredTheme;
+				if (theme === 'dark') {
+					document.documentElement.classList.add('dark');
+					document.documentElement.setAttribute('data-theme', 'night');
+				} else {
+					document.documentElement.classList.remove('dark');
+					document.documentElement.setAttribute('data-theme', 'nord');
+				}
+			})();
+		</script>
+
 		%sveltekit.head%
 	</head>
 	<body data-sveltekit-preload-data="hover">
