@@ -1,69 +1,75 @@
 <script lang="ts">
-	// 使用 Svelte 5 Runes
+	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
+	import { msg } from '$lib/state/msg.svelte';
+
 	let isRegister = $state(false);
 	let isLoading = $state(false);
+	let username = $state('');
+	let password = $state('');
+	let confirmPassword = $state('');
 
-	// 模拟提交
 	function handleSubmit(e: Event) {
 		e.preventDefault();
 		isLoading = true;
-		setTimeout(() => {
+
+		if (isRegister && password !== confirmPassword) {
+			msg.alert('两次输入的密码不一致！', '请重新输入密码', 'warning');
 			isLoading = false;
-			alert(isRegister ? '注册成功！' : '登录成功！');
-			// 这里可以添加 goto('/') 跳转
-		}, 1500);
+			return;
+		}
+		// setTimeout(() => {
+		// 	isLoading = false;
+		// 	// alert(isRegister ? '注册成功！' : '登录成功！');
+		// 	msg.alert(isRegister ? '注册成功！' : '登录成功！');
+		// 	goto(resolve('/'));
+		// }, 1500);
 	}
 </script>
 
 <div class="flex min-h-[80vh] flex-col items-center justify-center">
 	<div class="card w-full max-w-sm border border-base-200 bg-base-100 shadow-2xl">
 		<div class="card-body">
-			<!-- 标题 & 切换 -->
 			<h2 class="mb-4 card-title justify-center text-3xl font-bold">
 				{isRegister ? '创建账户' : '欢迎回来'}
 			</h2>
 
 			<form onsubmit={handleSubmit} class="flex flex-col gap-4">
-				<!-- 邮箱输入 -->
 				<div class="form-control">
-					<label class="label" for="email">
-						<span class="label-text">电子邮箱</span>
+					<label class="label" for="username">
+						<span class="label-text">用户名</span>
 					</label>
 					<input
-						type="email"
-						id="email"
-						placeholder="email@example.com"
+						bind:value={username}
+						type="text"
+						id="username"
+						placeholder="username"
 						class="input-bordered input w-full"
 						required
 					/>
 				</div>
 
-				<!-- 密码输入 -->
 				<div class="form-control">
 					<label class="label" for="password">
 						<span class="label-text">密码</span>
 					</label>
 					<input
+						bind:value={password}
 						type="password"
 						id="password"
 						placeholder="••••••••"
 						class="input-bordered input w-full"
 						required
 					/>
-					{#if !isRegister}
-						<label class="label" for="password">
-							<a href="#" class="label-text-alt link link-hover">忘记密码?</a>
-						</label>
-					{/if}
 				</div>
 
-				<!-- 注册时的确认密码 -->
 				{#if isRegister}
 					<div class="form-control animate-fade-in-down">
 						<label class="label" for="confirm-pass">
 							<span class="label-text">确认密码</span>
 						</label>
 						<input
+							bind:value={confirmPassword}
 							type="password"
 							id="confirm-pass"
 							placeholder="••••••••"
@@ -97,7 +103,6 @@
 </div>
 
 <style>
-	/* 简单的淡入动画 */
 	.animate-fade-in-down {
 		animation: fadeInDown 0.3s ease-out;
 	}

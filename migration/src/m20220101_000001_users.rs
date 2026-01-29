@@ -13,20 +13,9 @@ impl MigrationTrait for Migration {
             &[
                 ("id", ColType::PkAuto),
                 ("pid", ColType::Uuid),
-                ("email", ColType::StringUniq),
+                ("username", ColType::StringUniq),
                 ("password", ColType::String),
                 ("api_key", ColType::StringUniq),
-                ("name", ColType::String),
-                ("reset_token", ColType::StringNull),
-                ("reset_sent_at", ColType::TimestampWithTimeZoneNull),
-                ("email_verification_token", ColType::StringNull),
-                (
-                    "email_verification_sent_at",
-                    ColType::TimestampWithTimeZoneNull,
-                ),
-                ("email_verified_at", ColType::TimestampWithTimeZoneNull),
-                ("magic_link_token", ColType::StringNull),
-                ("magic_link_expiration", ColType::TimestampWithTimeZoneNull),
             ],
             &[],
         )

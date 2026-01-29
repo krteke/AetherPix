@@ -1,6 +1,6 @@
-use aether_pix::app::App;
 #[allow(unused_imports)]
 use loco_rs::{cli::playground, prelude::*};
+use AetherPix::app::App;
 
 #[tokio::main]
 async fn main() -> loco_rs::Result<()> {
