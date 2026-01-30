@@ -37,6 +37,8 @@ uuid = { version = "1.6", features = ["v4"] }
 include_dir = { version = "0.7" }
 axum-extra = { version = "0.10", features = ["form"] }
 image = { version = "0.25.9" }
+cookie = { version = "0.18.1" }
+thiserror = "*"
 
 [[bin]]
 name = "aether_pix-cli"

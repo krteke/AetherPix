@@ -43,8 +43,6 @@ workers:
   #   - BackgroundAsync - Workers operate asynchronously in the background, processing tasks with async capabilities.
   mode: BackgroundAsync
 
-  
-
 # Mailer Configuration.
 mailer:
   # SMTP mailer configuration.
@@ -99,3 +97,6 @@ auth:
     secret: H7yebBQI8dbYZjCBv701
     # Token expiration time in seconds
     expiration: 604800 # 7 days
+    location:
+      from: Cookie
+      name: auth_token

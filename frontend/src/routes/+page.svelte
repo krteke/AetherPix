@@ -2,6 +2,7 @@
 	import { goto } from '$app/navigation';
 	import { uploadSession, type UploadedFile } from '$lib/state/upload.svelte';
 	import UploadProgress from '$lib/components/UploadProgress.svelte';
+	import { resolve } from '$app/paths';
 
 	let isDragging = $state(false);
 
@@ -31,7 +32,7 @@
 		// 保存数据到全局状态
 		uploadSession.setBatch(completedUploads);
 		// 跳转到新的详情页
-		goto('/upload/result');
+		goto(resolve('/upload/result/'));
 	}
 </script>
 
@@ -47,6 +48,8 @@
         {isDragging
 			? 'scale-[1.01] border-primary bg-primary/10'
 			: 'border-base-300 bg-base-100 hover:border-primary/50'}"
+		tabindex="0"
+		role="button"
 		ondragover={(e) => {
 			e.preventDefault();
 			isDragging = true;

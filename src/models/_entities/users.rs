@@ -11,11 +11,29 @@ pub struct Model {
     #[sea_orm(primary_key)]
     pub id: i32,
     pub pid: Uuid,
+    #[sea_orm(unique)]
+    pub email: String,
     pub password: String,
     #[sea_orm(unique)]
     pub api_key: String,
     #[sea_orm(unique)]
     pub username: String,
+    pub role: UserRole,
+    pub reset_token: Option<String>,
+    pub reset_sent_at: Option<DateTimeWithTimeZone>,
+    pub email_verification_token: Option<String>,
+    pub email_verification_sent_at: Option<DateTimeWithTimeZone>,
+    pub email_verified_at: Option<DateTimeWithTimeZone>,
+}
+
+#[derive(Clone, Copy, Debug, EnumIter, PartialEq, Eq, DeriveActiveEnum, Serialize, Deserialize)]
+#[sea_orm(enum_name = "user_role", rs_type = "String", db_type = "Enum")]
+#[serde(rename_all = "lowercase")]
+pub enum UserRole {
+    #[sea_orm(string_value = "admin")]
+    Admin,
+    #[sea_orm(string_value = "user")]
+    User,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]

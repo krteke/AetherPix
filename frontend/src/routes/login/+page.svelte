@@ -1,15 +1,81 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
+	import { auth } from '$lib/state/auth.svelte';
 	import { msg } from '$lib/state/msg.svelte';
+	import type { ErrorResponse, UserResponse } from '$lib/types/type';
 
 	let isRegister = $state(false);
 	let isLoading = $state(false);
 	let username = $state('');
 	let password = $state('');
+	let email = $state('');
 	let confirmPassword = $state('');
 
-	function handleSubmit(e: Event) {
+	const userNameReg = /^[a-zA-Z0-9_-]+$/;
+
+	async function register() {
+		try {
+			const res = await fetch('/api/auth/register', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json'
+				},
+				body: JSON.stringify({ username, password, email })
+			});
+
+			if (!res.ok) {
+				const text = JSON.parse(await res.text()) as unknown as ErrorResponse;
+				msg.alert(`状态码: ${res.status}\nError: ${text.description}`, '注册失败', 'error');
+				isLoading = false;
+				return;
+			}
+
+			await msg.alert(
+				`验证邮件已发送至${email}。\n请检查您的收件箱（包括垃圾邮件文件夹）并点击链接激活账号。`,
+				'注册成功'
+			);
+		} catch (error) {
+			console.error(error);
+			msg.alert(error as string, '注册失败', 'error');
+			isLoading = false;
+			return;
+		} finally {
+			isLoading = false;
+		}
+	}
+
+	async function login() {
+		try {
+			const res = await fetch('/api/auth/login', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json'
+				},
+				body: JSON.stringify({ username, password })
+			});
+
+			if (!res.ok) {
+				const text = JSON.parse(await res.text()) as unknown as ErrorResponse;
+				msg.alert(`状态码: ${res.status}\nError: ${text.description}`, '登录失败', 'error');
+				isLoading = false;
+				return;
+			}
+
+			const loginResponse: UserResponse = await res.json();
+			auth.login(loginResponse);
+			isLoading = false;
+			await msg.alert('登录成功');
+			goto(resolve('/'));
+		} catch (error) {
+			console.error(error);
+			msg.alert(error as string, '登录失败', 'error');
+			isLoading = false;
+			return;
+		}
+	}
+
+	async function handleSubmit(e: Event) {
 		e.preventDefault();
 		isLoading = true;
 
@@ -18,12 +84,20 @@
 			isLoading = false;
 			return;
 		}
-		// setTimeout(() => {
-		// 	isLoading = false;
-		// 	// alert(isRegister ? '注册成功！' : '登录成功！');
-		// 	msg.alert(isRegister ? '注册成功！' : '登录成功！');
-		// 	goto(resolve('/'));
-		// }, 1500);
+
+		if (isRegister) {
+			if (userNameReg.test(username) && username.trim().length >= 2) {
+				await register();
+			} else if (!userNameReg.test(username)) {
+				msg.alert('用户名只能包含字母、数字、下划线和短横线', '用户名格式不正确！', 'warning');
+			} else if (password.length < 6) {
+				msg.alert('密码至少6位', '密码长度太短', 'warning');
+			} else {
+				msg.alert('用户名长度至少为2个字符', '用户名长度不正确！', 'warning');
+			}
+		} else {
+			await login();
+		}
 	}
 </script>
 
@@ -48,7 +122,21 @@
 						required
 					/>
 				</div>
-
+				{#if isRegister}
+					<div class="form-control">
+						<label class="label" for="email">
+							<span class="label-text">邮箱</span>
+						</label>
+						<input
+							bind:value={email}
+							type="text"
+							id="email"
+							placeholder="example@example.com"
+							class="input-bordered input w-full"
+							required
+						/>
+					</div>
+				{/if}
 				<div class="form-control">
 					<label class="label" for="password">
 						<span class="label-text">密码</span>

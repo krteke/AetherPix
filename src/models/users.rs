@@ -1,12 +1,19 @@
 use async_trait::async_trait;
+use chrono::Local;
 use loco_rs::{auth::jwt, hash, prelude::*};
+use regex::Regex;
 use serde::{Deserialize, Serialize};
 use serde_json::Map;
+use std::sync::OnceLock;
 use uuid::Uuid;
 
-use crate::controllers::auth::get_allow_username_re;
-
 pub use super::_entities::users::{self, ActiveModel, Entity, Model};
+
+pub static USERNAME_RE: OnceLock<Regex> = OnceLock::new();
+
+pub fn get_allow_username_re() -> &'static Regex {
+    USERNAME_RE.get_or_init(|| Regex::new(r"^[a-zA-Z0-9_-]+$").expect("Failed to compile regex"))
+}
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct LoginParams {
@@ -14,9 +21,14 @@ pub struct LoginParams {
     pub password: String,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize, Validate)]
 pub struct RegisterParams {
+    #[validate(email(message = "邮箱格式错误"))]
+    pub email: String,
+    #[validate(length(min = 2, message = "用户名至少需要两个字符"))]
+    #[validate(regex(path = get_allow_username_re(), message = "用户名只能包含字母、数字、_ 和 -"))]
     pub username: String,
+    #[validate(length(min = 6, message = "密码太短, 至少需要6个字符"))]
     pub password: String,
 }
 
@@ -25,12 +37,15 @@ pub struct Validator {
     #[validate(length(min = 2, message = "用户名至少需要两个字符"))]
     #[validate(regex(path = get_allow_username_re(), message = "用户名只能包含字母、数字、_ 和 -"))]
     pub username: String,
+    #[validate(email(message = "invalid email"))]
+    pub email: String,
 }
 
 impl Validatable for ActiveModel {
     fn validator(&self) -> Box<dyn Validate> {
         Box::new(Validator {
             username: self.username.as_ref().to_owned(),
+            email: self.email.as_ref().to_owned(),
         })
     }
 }
@@ -73,6 +88,60 @@ impl Authenticable for Model {
 }
 
 impl Model {
+    /// finds a user by the provided email
+    ///
+    /// # Errors
+    ///
+    /// When could not find user by the given token or DB query error
+    pub async fn find_by_email(db: &DatabaseConnection, email: &str) -> ModelResult<Self> {
+        let user = users::Entity::find()
+            .filter(
+                model::query::condition()
+                    .eq(users::Column::Email, email)
+                    .build(),
+            )
+            .one(db)
+            .await?;
+        user.ok_or_else(|| ModelError::EntityNotFound)
+    }
+
+    /// finds a user by the provided verification token
+    ///
+    /// # Errors
+    ///
+    /// When could not find user by the given token or DB query error
+    pub async fn find_by_verification_token(
+        db: &DatabaseConnection,
+        token: &str,
+    ) -> ModelResult<Self> {
+        let user = users::Entity::find()
+            .filter(
+                model::query::condition()
+                    .eq(users::Column::EmailVerificationToken, token)
+                    .build(),
+            )
+            .one(db)
+            .await?;
+        user.ok_or_else(|| ModelError::EntityNotFound)
+    }
+
+    /// finds a user by the provided reset token
+    ///
+    /// # Errors
+    ///
+    /// When could not find user by the given token or DB query error
+    pub async fn find_by_reset_token(db: &DatabaseConnection, token: &str) -> ModelResult<Self> {
+        let user = users::Entity::find()
+            .filter(
+                model::query::condition()
+                    .eq(users::Column::ResetToken, token)
+                    .build(),
+            )
+            .one(db)
+            .await?;
+        user.ok_or_else(|| ModelError::EntityNotFound)
+    }
+
     /// finds a user by the provided pid
     ///
     /// # Errors
@@ -151,8 +220,17 @@ impl Model {
             .one(&txn)
             .await?
             .is_some()
+            && users::Entity::find()
+                .filter(
+                    model::query::condition()
+                        .eq(users::Column::Email, &params.email)
+                        .build(),
+                )
+                .one(&txn)
+                .await?
+                .is_some()
         {
-            return Err(ModelError::EntityAlreadyExists {});
+            return Err(ModelError::EntityAlreadyExists);
         }
 
         let password_hash =
@@ -160,6 +238,8 @@ impl Model {
         let user = users::ActiveModel {
             password: ActiveValue::set(password_hash),
             username: ActiveValue::set(params.username.clone()),
+            email: ActiveValue::set(params.email.clone()),
+            role: ActiveValue::set(users::UserRole::User),
             ..Default::default()
         }
         .insert(&txn)
@@ -182,4 +262,75 @@ impl Model {
     }
 }
 
-impl ActiveModel {}
+impl ActiveModel {
+    /// Sets the email verification information for the user and
+    /// updates it in the database.
+    ///
+    /// This method is used to record the timestamp when the email verification
+    /// was sent and generate a unique verification token for the user.
+    ///
+    /// # Errors
+    ///
+    /// when has DB query error
+    pub async fn set_email_verification_sent(
+        mut self,
+        db: &DatabaseConnection,
+    ) -> ModelResult<Model> {
+        self.email_verification_sent_at = ActiveValue::set(Some(Local::now().into()));
+        self.email_verification_token = ActiveValue::Set(Some(Uuid::new_v4().to_string()));
+        self.update(db).await.map_err(ModelError::from)
+    }
+
+    /// Sets the information for a reset password request,
+    /// generates a unique reset password token, and updates it in the
+    /// database.
+    ///
+    /// This method records the timestamp when the reset password token is sent
+    /// and generates a unique token for the user.
+    ///
+    /// # Arguments
+    ///
+    /// # Errors
+    ///
+    /// when has DB query error
+    pub async fn set_forgot_password_sent(mut self, db: &DatabaseConnection) -> ModelResult<Model> {
+        self.reset_sent_at = ActiveValue::set(Some(Local::now().into()));
+        self.reset_token = ActiveValue::Set(Some(Uuid::new_v4().to_string()));
+        self.update(db).await.map_err(ModelError::from)
+    }
+
+    /// Records the verification time when a user verifies their
+    /// email and updates it in the database.
+    ///
+    /// This method sets the timestamp when the user successfully verifies their
+    /// email.
+    ///
+    /// # Errors
+    ///
+    /// when has DB query error
+    pub async fn verified(mut self, db: &DatabaseConnection) -> ModelResult<Model> {
+        self.email_verified_at = ActiveValue::set(Some(Local::now().into()));
+        self.update(db).await.map_err(ModelError::from)
+    }
+
+    /// Resets the current user password with a new password and
+    /// updates it in the database.
+    ///
+    /// This method hashes the provided password and sets it as the new password
+    /// for the user.
+    ///
+    /// # Errors
+    ///
+    /// when has DB query error or could not hashed the given password
+    pub async fn reset_password(
+        mut self,
+        db: &DatabaseConnection,
+        password: &str,
+    ) -> ModelResult<Model> {
+        self.password =
+            ActiveValue::set(hash::hash_password(password).map_err(|e| ModelError::Any(e.into()))?);
+        self.reset_token = ActiveValue::Set(None);
+        self.reset_sent_at = ActiveValue::Set(None);
+        self.update(db).await.map_err(ModelError::from)
+    }
+}
