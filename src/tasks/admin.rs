@@ -37,7 +37,6 @@ impl Task for Admin {
             username: ActiveValue::set(username.to_string()),
             role: ActiveValue::set(users::UserRole::Admin),
             email: ActiveValue::set(email.to_string()),
-            email_verification_sent_at: ActiveValue::set(Some(Local::now().into())),
             email_verified_at: ActiveValue::set(Some(Local::now().into())),
             ..Default::default()
         }

@@ -310,6 +310,8 @@ impl ActiveModel {
     /// when has DB query error
     pub async fn verified(mut self, db: &DatabaseConnection) -> ModelResult<Model> {
         self.email_verified_at = ActiveValue::set(Some(Local::now().into()));
+        self.email_verification_token = ActiveValue::set(None);
+        self.email_verification_sent_at = ActiveValue::set(None);
         self.update(db).await.map_err(ModelError::from)
     }
 

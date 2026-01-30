@@ -9,6 +9,7 @@ use crate::{
 };
 use ::cookie::{time::Duration, Cookie};
 use axum::http::{header::SET_COOKIE, HeaderValue};
+use chrono::Local;
 use loco_rs::{config::JWT, prelude::*};
 use serde::{Deserialize, Serialize};
 
@@ -27,6 +28,8 @@ pub struct ResetParams {
 pub struct ResendVerificationParams {
     pub email: String,
 }
+
+const VERIFY_TOKEN_EXP_HOURS: i64 = 24;
 
 /// Register function creates a new user with the given parameters
 #[debug_handler]
@@ -67,20 +70,34 @@ async fn register(
 /// Verify register user. if the user not verified his email, he can't login to
 /// the system.
 #[debug_handler]
-async fn verify(State(ctx): State<AppContext>, Path(token): Path<String>) -> Result<Response> {
+async fn verify(
+    State(ctx): State<AppContext>,
+    Path(token): Path<String>,
+) -> AppResult<impl IntoResponse> {
     let Ok(user) = users::Model::find_by_verification_token(&ctx.db, &token).await else {
-        return unauthorized("invalid token");
+        return Err(AppError::InvalidVerifyToken);
     };
 
     if user.email_verified_at.is_some() {
         tracing::info!(pid = user.pid.to_string(), "user already verified");
-    } else {
-        let active_model = user.into_active_model();
-        let user = active_model.verified(&ctx.db).await?;
-        tracing::info!(pid = user.pid.to_string(), "user verified");
+        return Ok(());
     }
 
-    format::json(())
+    if let Some(send_at) = user.email_verification_sent_at {
+        let exp_time = send_at + chrono::Duration::hours(VERIFY_TOKEN_EXP_HOURS);
+
+        if Local::now() > exp_time {
+            return Err(AppError::VerifyTokenOutdated);
+        }
+    } else {
+        return Err(AppError::InvalidRequest);
+    }
+
+    let active_model = user.into_active_model();
+    let user = active_model.verified(&ctx.db).await?;
+    tracing::info!(pid = user.pid.to_string(), "user verified");
+
+    Ok(())
 }
 
 /// In case the user forgot his password  this endpoints generate a forgot token

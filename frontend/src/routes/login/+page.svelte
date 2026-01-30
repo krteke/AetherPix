@@ -3,14 +3,16 @@
 	import { resolve } from '$app/paths';
 	import { auth } from '$lib/state/auth.svelte';
 	import { msg } from '$lib/state/msg.svelte';
-	import type { ErrorResponse, UserResponse } from '$lib/types/type';
+	import type { UserResponse } from '$lib/types/type';
 
 	let isRegister = $state(false);
 	let isLoading = $state(false);
+	let isSending = $state(false);
 	let username = $state('');
 	let password = $state('');
 	let email = $state('');
 	let confirmPassword = $state('');
+	let sendReg = $state(false);
 
 	const userNameReg = /^[a-zA-Z0-9_-]+$/;
 
@@ -25,8 +27,8 @@
 			});
 
 			if (!res.ok) {
-				const text = JSON.parse(await res.text()) as unknown as ErrorResponse;
-				msg.alert(`状态码: ${res.status}\nError: ${text.description}`, '注册失败', 'error');
+				const text = await res.text();
+				msg.alert(`状态码: ${res.status}\nError: ${text}`, '注册失败', 'error');
 				isLoading = false;
 				return;
 			}
@@ -35,6 +37,7 @@
 				`验证邮件已发送至${email}。\n请检查您的收件箱（包括垃圾邮件文件夹）并点击链接激活账号。`,
 				'注册成功'
 			);
+			sendReg = true;
 		} catch (error) {
 			console.error(error);
 			msg.alert(error as string, '注册失败', 'error');
@@ -56,8 +59,8 @@
 			});
 
 			if (!res.ok) {
-				const text = JSON.parse(await res.text()) as unknown as ErrorResponse;
-				msg.alert(`状态码: ${res.status}\nError: ${text.description}`, '登录失败', 'error');
+				const text = await res.text();
+				msg.alert(`状态码: ${res.status}\nError: ${text}`, '登录失败', 'error');
 				isLoading = false;
 				return;
 			}
@@ -74,6 +77,32 @@
 			return;
 		}
 	}
+
+	const resendEmail = async () => {
+		isSending = true;
+		try {
+			const res = await fetch('/api/auth/resend-verification-mail', {
+				method: 'POST',
+				body: JSON.stringify({ email })
+			});
+
+			if (!res.ok) {
+				const text = await res.text();
+				msg.alert(`状态码: ${res.status}\nError: ${text}`, '发送失败', 'error');
+				isSending = false;
+				return;
+			}
+			isSending = false;
+			await msg.alert('发送成功，请查看邮箱');
+		} catch (e) {
+			console.error(e);
+			msg.alert(e as string, '登录失败', 'error');
+			isLoading = false;
+			return;
+		} finally {
+			isSending = false;
+		}
+	};
 
 	async function handleSubmit(e: Event) {
 		e.preventDefault();
@@ -167,6 +196,14 @@
 					</div>
 				{/if}
 
+				{#if isRegister && sendReg}
+					<button class="btn mb-2 w-full btn-warning" disabled={isSending} onclick={resendEmail}>
+						{#if isSending}
+							<span class="loading loading-spinner"></span>
+						{/if}
+						重新发送验证邮件
+					</button>
+				{/if}
 				<!-- 提交按钮 -->
 				<div class="form-control mt-6">
 					<button class="btn w-full btn-primary" disabled={isLoading}>
