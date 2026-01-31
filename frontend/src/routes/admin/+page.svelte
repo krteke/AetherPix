@@ -15,7 +15,7 @@
 	};
 </script>
 
-<div class="flex min-h-screen flex-col bg-base-100 md:flex-row">
+<div class="flex min-h-screen flex-col bg-base-100 transition-all duration-300 md:flex-row">
 	<!-- 侧边栏 -->
 	<AdminSidebar bind:activeTab />
 

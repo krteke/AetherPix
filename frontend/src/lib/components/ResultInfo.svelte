@@ -31,7 +31,9 @@
 
 <div class="mx-auto grid max-w-5xl grid-cols-1 gap-6 md:grid-cols-3">
 	<!-- 左侧：链接工具 -->
-	<div class="card border border-base-200 bg-base-100 shadow-xl md:col-span-2">
+	<div
+		class="card border border-base-200 bg-base-100 shadow-xl transition-all duration-300 md:col-span-2"
+	>
 		<div class="card-body">
 			<h3 class="mb-4 card-title text-base">获取引用链接</h3>
 
@@ -39,7 +41,7 @@
 				<div class="join w-full">
 					<!-- 1. 下拉菜单选择格式 -->
 					<select
-						class="select-bordered select join-item w-32 bg-base-200"
+						class="select-bordered select join-item w-32 bg-base-200 transition-all duration-300"
 						bind:value={selectedType}
 					>
 						{#each linkTypes as type, i (i)}
@@ -50,16 +52,18 @@
 					<!-- 2. 链接显示框 -->
 					<input
 						type="text"
-						class="input-bordered input join-item w-full font-mono text-sm"
+						class="input-bordered input join-item w-full font-mono text-sm transition-all duration-300"
 						value={displayLink}
 						readonly
 					/>
 
 					<!-- 3. 复制按钮 -->
-					<button class="btn join-item btn-primary" onclick={copyLink}> 复制 </button>
+					<button class="btn join-item transition-all duration-300 btn-primary" onclick={copyLink}>
+						复制
+					</button>
 				</div>
 
-				<p class="mt-2 text-xs text-base-content/60">
+				<p class="mt-2 text-xs text-base-content/60 transition-all duration-300">
 					当前选择: <span class="font-bold text-primary">{selectedType}</span>。
 					支持直接粘贴到您的文档中。
 				</p>
@@ -68,7 +72,7 @@
 	</div>
 
 	<!-- 右侧：文件详情 -->
-	<div class="card h-fit border border-base-200 bg-base-100 shadow-xl">
+	<div class="card h-fit border border-base-200 bg-base-100 shadow-xl transition-all duration-300">
 		<div class="card-body p-5">
 			<h3 class="mb-2 card-title text-sm tracking-wide uppercase opacity-70">文件详情</h3>
 
@@ -92,7 +96,11 @@
 			</div>
 
 			<div class="mt-4 card-actions">
-				<a href={image.url} download={image.name} class="btn w-full btn-outline btn-sm">
+				<a
+					href={image.url}
+					download={image.name}
+					class="btn w-full transition-all duration-300 btn-outline btn-sm"
+				>
 					下载文件
 				</a>
 			</div>

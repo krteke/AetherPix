@@ -20,7 +20,9 @@
 <div class="container mx-auto max-w-6xl px-4 py-8">
 	<div class="mb-6">
 		<h1 class="text-3xl font-extrabold">账户设置</h1>
-		<p class="text-base-content/60">管理您的个人信息、安全选项及偏好。</p>
+		<p class="text-base-content/60 transition-all duration-300">
+			管理您的个人信息、安全选项及偏好。
+		</p>
 	</div>
 
 	<div class="flex flex-col items-start gap-8 md:flex-row">
@@ -35,7 +37,7 @@
 			<!-- 简单的淡入动画容器 -->
 			<div class="animate-fade-in">
 				<!-- Svelte 动态组件 -->
-				<svelte:component this={panels[activeTab]} />
+				<svelte:component this={panels[activeTab]} class=" transition-all duration-300" />
 			</div>
 		</main>
 	</div>

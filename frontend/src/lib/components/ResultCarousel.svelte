@@ -18,7 +18,7 @@
 <div class="group relative mx-auto mb-8 w-full max-w-4xl">
 	<!-- 图片展示区 -->
 	<div
-		class="relative carousel h-[500px] w-full overflow-hidden rounded-box border border-base-200 bg-base-300"
+		class="relative carousel h-[500px] w-full overflow-hidden rounded-box border border-base-200 bg-base-300 transition-all duration-300"
 	>
 		{#each images as img, index (index)}
 			<div
@@ -47,7 +47,7 @@
 		<div class="mt-2 flex w-full justify-center gap-2 py-2">
 			{#each images as _, i (i)}
 				<button
-					class="btn btn-circle btn-xs {i === activeIndex
+					class="btn btn-circle transition-all duration-300 btn-xs {i === activeIndex
 						? 'btn-primary'
 						: 'bg-base-200 btn-ghost'}"
 					onclick={() => (activeIndex = i)}

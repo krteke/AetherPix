@@ -25,8 +25,10 @@
 	];
 </script>
 
-<ul class="menu h-fit w-full gap-1 rounded-box border border-base-200 bg-base-100 p-2 md:w-64">
-	<li class="mb-2 menu-title px-4">设置中心</li>
+<ul
+	class="menu h-fit w-full gap-1 rounded-box border border-base-200 bg-base-100 p-2 transition-all duration-300 md:w-64"
+>
+	<li class="mb-2 menu-title px-4 transition-all duration-300">设置中心</li>
 	{#each menuItems as item, i (i)}
 		<li>
 			<button

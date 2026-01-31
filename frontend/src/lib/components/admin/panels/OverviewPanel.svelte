@@ -28,7 +28,7 @@
 
 <div class="mb-8 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
 	<!-- 业务统计卡片 -->
-	<div class="stats border border-base-200 bg-base-100 shadow">
+	<div class="stats border border-base-200 bg-base-100 shadow transition-all duration-300">
 		<div class="stat">
 			<div class="stat-figure text-secondary">
 				<svg
@@ -50,7 +50,7 @@
 		</div>
 	</div>
 
-	<div class="stats border border-base-200 bg-base-100 shadow">
+	<div class="stats border border-base-200 bg-base-100 shadow transition-all duration-300">
 		<div class="stat">
 			<div class="stat-figure text-primary">
 				<svg
@@ -72,7 +72,7 @@
 		</div>
 	</div>
 
-	<div class="stats border border-base-200 bg-base-100 shadow">
+	<div class="stats border border-base-200 bg-base-100 shadow transition-all duration-300">
 		<div class="stat">
 			<div class="stat-title">存储占用</div>
 			<div class="stat-value text-accent">42%</div>
@@ -80,7 +80,7 @@
 		</div>
 	</div>
 
-	<div class="stats border border-base-200 bg-base-100 shadow">
+	<div class="stats border border-base-200 bg-base-100 shadow transition-all duration-300">
 		<div class="stat">
 			<div class="stat-title">系统运行</div>
 			<div class="stat-value font-mono text-lg">{adminStore.server.uptime}</div>
@@ -90,14 +90,14 @@
 </div>
 
 <!-- 服务器负载面板 -->
-<div class="card border border-base-200 bg-base-100 shadow-xl">
+<div class="card border border-base-200 bg-base-100 shadow-xl transition-all duration-300">
 	<div class="card-body">
 		<h3 class="mb-4 card-title">服务器负载 (Live)</h3>
 		<div class="flex flex-col items-center justify-around gap-8 md:flex-row">
 			<!-- CPU 环形进度条 -->
 			<div class="flex flex-col items-center gap-2">
 				<div
-					class="radial-progress {cpuColor} border-4 border-base-200 bg-base-200"
+					class="radial-progress {cpuColor} border-4 border-base-200 bg-base-200 transition-all duration-300"
 					style="--value:{adminStore.server.cpu}; --size:8rem; --thickness: 0.8rem;"
 					role="progressbar"
 				>

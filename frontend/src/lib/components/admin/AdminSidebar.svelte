@@ -20,7 +20,9 @@
 	];
 </script>
 
-<div class="flex min-h-[calc(100vh-4rem)] w-full flex-col gap-2 bg-base-200 p-4 md:w-64">
+<div
+	class="flex min-h-[calc(100vh-4rem)] w-full flex-col gap-2 bg-base-200 p-4 transition-all duration-300 md:w-64"
+>
 	<div class="mb-4 px-4 py-2">
 		<h2 class="flex items-center gap-2 text-xl font-black tracking-tighter">
 			<span class="badge badge-sm badge-error">ADMIN</span>
@@ -31,7 +33,9 @@
 		{#each items as item, i (i)}
 			<li>
 				<button
-					class={activeTab === item.id ? 'active bg-neutral font-bold text-neutral-content' : ''}
+					class="transition-all duration-300 {activeTab === item.id
+						? 'active bg-neutral font-bold text-neutral-content'
+						: ''}"
 					onclick={() => (activeTab = item.id)}
 				>
 					<svg

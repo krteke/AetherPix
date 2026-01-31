@@ -38,13 +38,15 @@
 
 <div class="mx-auto max-w-3xl py-10">
 	<div class="mb-8 text-center">
-		<h1 class="mb-2 text-4xl font-extrabold text-base-content">上传图片</h1>
-		<p class="text-base-content/60">极速上传，全球分发</p>
+		<h1 class="mb-2 text-4xl font-extrabold text-base-content transition-all duration-300">
+			上传图片
+		</h1>
+		<p class="text-base-content/60 transition-all duration-300">极速上传，全球分发</p>
 	</div>
 
 	<!-- 拖拽上传区域 -->
 	<div
-		class="card mb-8 cursor-pointer border-2 border-dashed transition-all duration-200
+		class="card mb-8 cursor-pointer border-2 border-dashed transition-all duration-300
         {isDragging
 			? 'scale-[1.01] border-primary bg-primary/10'
 			: 'border-base-300 bg-base-100 hover:border-primary/50'}"
@@ -84,7 +86,9 @@
 				accept="image/*"
 				onchange={(e) => handleFiles(e.currentTarget.files)}
 			/>
-			<label for="fileInput" class="btn mt-4 btn-sm btn-primary">选择文件</label>
+			<label for="fileInput" class="btn mt-4 transition-all duration-300 btn-sm btn-primary"
+				>选择文件</label
+			>
 		</div>
 	</div>
 
@@ -98,7 +102,7 @@
 
 		<!-- 全部完成后显示的 Banner -->
 		{#if isAllDone}
-			<div class="animate-bounce-in mt-6 alert alert-success shadow-lg">
+			<div class="animate-bounce-in mt-6 alert alert-success shadow-lg transition-all duration-300">
 				<svg
 					xmlns="http://www.w3.org/2000/svg"
 					class="h-6 w-6 shrink-0 stroke-current"
@@ -115,7 +119,10 @@
 					<h3 class="font-bold">上传完成!</h3>
 					<div class="text-xs">成功上传 {completedUploads.length} 张图片</div>
 				</div>
-				<button class="btn text-success-content btn-sm btn-success" onclick={goToDetails}>
+				<button
+					class="btn text-success-content transition-all duration-300 btn-sm btn-success"
+					onclick={goToDetails}
+				>
 					查看详情与链接
 				</button>
 			</div>

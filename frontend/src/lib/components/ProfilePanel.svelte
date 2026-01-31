@@ -16,7 +16,7 @@
 	}
 </script>
 
-<div class="card border border-base-200 bg-base-100 shadow">
+<div class="card border border-base-200 bg-base-100 shadow transition-all duration-300">
 	<div class="card-body">
 		<h2 class="mb-4 card-title text-xl">编辑个人资料</h2>
 
@@ -27,7 +27,7 @@
 					<img src={formData.avatar} alt="Avatar" />
 				</div>
 			</div>
-			<div>
+			<div class=" transition-all duration-300">
 				<button class="btn mb-2 btn-outline btn-sm">更换头像</button>
 				<p class="text-xs text-base-content/60">支持 JPG, PNG. 最大 2MB.</p>
 			</div>
@@ -42,26 +42,30 @@
 			}}
 		>
 			<div class="grid grid-cols-1 gap-4 md:grid-cols-2">
-				<div class="form-control">
+				<div>
 					<label class="label"><span class="label-text">用户名</span></label>
-					<input type="text" bind:value={formData.username} class="input-bordered input" />
+					<input
+						type="text"
+						bind:value={formData.username}
+						class="input-bordered input transition-all duration-300"
+					/>
 				</div>
-				<div class="form-control">
+				<div>
 					<label class="label"><span class="label-text">电子邮箱</span></label>
 					<input
 						type="email"
 						bind:value={formData.email}
 						disabled
-						class="input-bordered input cursor-not-allowed bg-base-200 text-base-content/60"
+						class="input-bordered input cursor-not-allowed bg-base-200 text-base-content/60 transition-all duration-300"
 					/>
 				</div>
 			</div>
 
-			<div class="form-control">
+			<div>
 				<label class="label"><span class="label-text">个人简介</span></label>
 				<textarea
 					bind:value={formData.bio}
-					class="textarea-bordered textarea h-24"
+					class="textarea-bordered textarea h-24 transition-all duration-300"
 					placeholder="写点什么..."
 				></textarea>
 			</div>

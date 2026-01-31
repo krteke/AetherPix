@@ -18,7 +18,9 @@
 </script>
 
 <div class="min-h-screen bg-base-100 text-base-content transition-colors duration-300 ease-in-out">
-	<div class="navbar border-b border-base-200 bg-base-100 px-4 shadow-sm sm:px-8">
+	<div
+		class="navbar border-b border-base-200 bg-base-100 px-4 shadow-sm transition-all duration-300 sm:px-8"
+	>
 		<div class="flex-1">
 			<a
 				href={resolve('/')}
@@ -32,12 +34,12 @@
 				{#if auth.isAdmin}
 					<li><a href={resolve('/admin')}>控制面板</a></li>
 				{/if}
-				{#if !auth.isLoggedIn}
-					<!-- <ul class="menu menu-horizontal hidden px-1 sm:flex"> -->
+				{#if auth.isLoggedIn}
 					<!-- <li><a href={resolve('/albums')} class="font-medium">图库</a></li> -->
-					<li><a href={resolve('/login')}>登录</a></li>
-				{:else}
+					<li><a href={resolve('/settings')}>设置</a></li>
 					<li><button onclick={logout}>退出登录</button></li>
+				{:else}
+					<li><a href={resolve('/login')}>登录</a></li>
 				{/if}
 			</ul>
 			<ThemeToggle />

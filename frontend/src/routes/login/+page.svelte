@@ -131,14 +131,16 @@
 </script>
 
 <div class="flex min-h-[80vh] flex-col items-center justify-center">
-	<div class="card w-full max-w-sm border border-base-200 bg-base-100 shadow-2xl">
+	<div
+		class="card w-full max-w-sm border border-base-200 bg-base-100 shadow-2xl transition-all duration-300"
+	>
 		<div class="card-body">
 			<h2 class="mb-4 card-title justify-center text-3xl font-bold">
 				{isRegister ? '创建账户' : '欢迎回来'}
 			</h2>
 
 			<form onsubmit={handleSubmit} class="flex flex-col gap-4">
-				<div class="form-control">
+				<div>
 					<label class="label" for="username">
 						<span class="label-text">用户名</span>
 					</label>
@@ -147,13 +149,13 @@
 						type="text"
 						id="username"
 						placeholder="username"
-						class="input-bordered input w-full"
+						class="input-bordered input w-full transition-all duration-300"
 						minlength="2"
 						required
 					/>
 				</div>
 				{#if isRegister}
-					<div class="form-control">
+					<div>
 						<label class="label" for="email">
 							<span class="label-text">邮箱</span>
 						</label>
@@ -162,12 +164,12 @@
 							type="text"
 							id="email"
 							placeholder="example@example.com"
-							class="input-bordered input w-full"
+							class="input-bordered input w-full transition-all duration-300"
 							required
 						/>
 					</div>
 				{/if}
-				<div class="form-control">
+				<div>
 					<label class="label" for="password">
 						<span class="label-text">密码</span>
 					</label>
@@ -176,13 +178,13 @@
 						type="password"
 						id="password"
 						placeholder="••••••"
-						class="input-bordered input w-full"
+						class="input-bordered input w-full transition-all duration-300"
 						minlength="6"
 						required
 					/>
 				</div>
 				{#if isRegister}
-					<div class="form-control animate-fade-in-down">
+					<div class="animate-fade-in-down">
 						<label class="label" for="confirm-pass">
 							<span class="label-text">确认密码</span>
 						</label>
@@ -191,7 +193,7 @@
 							type="password"
 							id="confirm-pass"
 							placeholder="••••••"
-							class="input-bordered input w-full"
+							class="input-bordered input w-full transition-all duration-300"
 							class:input-error={confirmPassword && password != confirmPassword}
 							required
 						/>

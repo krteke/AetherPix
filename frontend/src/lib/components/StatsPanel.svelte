@@ -17,7 +17,7 @@
 <div class="flex flex-col gap-6">
 	<!-- 顶部概览卡片 -->
 	<div class="grid grid-cols-1 gap-4 md:grid-cols-3">
-		<div class="stats border border-base-200 shadow">
+		<div class="stats border border-base-200 shadow transition-all duration-300">
 			<div class="stat">
 				<div class="stat-figure text-primary">
 					<svg
@@ -39,7 +39,7 @@
 			</div>
 		</div>
 
-		<div class="stats border border-base-200 shadow">
+		<div class="stats border border-base-200 shadow transition-all duration-300">
 			<div class="stat">
 				<div class="stat-figure text-secondary">
 					<svg
@@ -68,7 +68,7 @@
 			</div>
 		</div>
 
-		<div class="card border border-base-200 bg-base-100 shadow">
+		<div class="card border border-base-200 bg-base-100 shadow transition-all duration-300">
 			<div class="card-body justify-center p-5">
 				<div class="mb-2 flex items-end justify-between">
 					<span class="text-sm font-bold opacity-70">存储空间</span>
@@ -83,11 +83,11 @@
 	</div>
 
 	<!-- 最近上传列表 -->
-	<div class="card border border-base-200 bg-base-100 shadow">
-		<div class="card-body">
+	<div class="card border border-base-200 bg-base-100 shadow transition-all duration-300">
+		<div class="card-body transition-all duration-300">
 			<h3 class="mb-2 card-title text-base">最近上传记录</h3>
 			<div class="overflow-x-auto">
-				<table class="table table-zebra">
+				<table class="table table-zebra transition-all duration-300">
 					<thead>
 						<tr>
 							<th>文件名</th>
@@ -99,7 +99,7 @@
 					</thead>
 					<tbody>
 						{#each userState.stats.recentUploads as file, i (i)}
-							<tr>
+							<tr class=" transition-all duration-300">
 								<td>
 									<div class="flex items-center gap-3">
 										<div class="placeholder avatar">

@@ -31,7 +31,7 @@
 	}
 </script>
 
-<div class="card h-full border border-base-200 bg-base-100 shadow">
+<div class="card h-full border border-base-200 bg-base-100 shadow transition-all duration-300">
 	<div class="card-body">
 		<div class="mb-4 flex items-center justify-between">
 			<h2 class="card-title">用户列表</h2>
@@ -39,17 +39,20 @@
 				<input
 					type="text"
 					placeholder="搜索用户..."
-					class="input-bordered input input-sm w-full max-w-xs"
+					class="input-bordered input input-sm w-full max-w-xs transition-all duration-300"
 					bind:value={searchTerm}
 				/>
-				<button class="btn btn-sm btn-primary" onclick={() => (isModalOpen = true)}>
+				<button
+					class="btn transition-all duration-300 btn-sm btn-primary"
+					onclick={() => (isModalOpen = true)}
+				>
 					+ 添加用户
 				</button>
 			</div>
 		</div>
 
 		<div class="overflow-x-auto">
-			<table class="table w-full table-zebra">
+			<table class="table w-full table-zebra transition-all duration-300">
 				<thead>
 					<tr>
 						<th>用户</th>
@@ -62,7 +65,7 @@
 				</thead>
 				<tbody>
 					{#each filteredUsers as user (user.id)}
-						<tr>
+						<tr class="transition-all duration-300">
 							<td>
 								<div class="flex items-center gap-3">
 									<div class="placeholder avatar">
@@ -80,7 +83,9 @@
 								{#if user.role === 'admin'}
 									<span class="badge badge-outline badge-sm badge-primary">管理员</span>
 								{:else}
-									<span class="badge badge-ghost badge-sm">普通用户</span>
+									<span class="badge badge-ghost badge-sm transition-all duration-300"
+										>普通用户</span
+									>
 								{/if}
 							</td>
 							<td>

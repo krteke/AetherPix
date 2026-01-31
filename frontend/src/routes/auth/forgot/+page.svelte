@@ -22,19 +22,21 @@
 	}
 </script>
 
-<div class="flex min-h-screen items-center justify-center bg-base-200">
-	<div class="card w-full max-w-sm bg-base-100 shadow-xl">
+<div class="flex min-h-screen items-center justify-center bg-base-200 transition-all duration-300">
+	<div class="card w-full max-w-sm bg-base-100 shadow-xl transition-all duration-300">
 		<div class="card-body">
 			{#if !isSent}
 				<h2 class="mb-2 card-title text-2xl font-bold">重置密码</h2>
-				<p class="mb-4 text-sm text-base-content/60">输入您的注册邮箱，我们将发送重置链接给您。</p>
+				<p class="mb-4 text-sm text-base-content/60 transition-all duration-300">
+					输入您的注册邮箱，我们将发送重置链接给您。
+				</p>
 
 				<form onsubmit={handleForgot}>
 					<div class="form-control mb-4">
 						<input
 							type="email"
 							placeholder="name@example.com"
-							class="input-bordered input"
+							class="input-bordered input transition-all duration-300"
 							bind:value={email}
 							required
 						/>

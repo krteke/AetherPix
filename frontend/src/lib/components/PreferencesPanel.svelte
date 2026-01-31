@@ -2,7 +2,7 @@
 	import { userState } from '$lib/state/user.svelte';
 </script>
 
-<div class="card border border-base-200 bg-base-100 shadow">
+<div class="card border border-base-200 bg-base-100 shadow transition-all duration-300">
 	<div class="card-body">
 		<h2 class="mb-6 card-title text-xl">通用偏好</h2>
 
@@ -12,7 +12,7 @@
 				<label class="label cursor-pointer justify-start gap-4">
 					<span class="label-text w-32 font-bold">默认链接格式</span>
 					<select
-						class="select-bordered select w-full max-w-xs select-sm"
+						class="select-bordered select w-full max-w-xs select-sm transition-all duration-300"
 						bind:value={userState.preferences.defaultLinkType}
 					>
 						<option value="Markdown">Markdown</option>
@@ -35,7 +35,7 @@
 					</span>
 					<input
 						type="checkbox"
-						class="toggle toggle-primary"
+						class="toggle transition-all duration-300 toggle-primary"
 						bind:checked={userState.preferences.autoCompress}
 					/>
 				</label>
@@ -49,7 +49,7 @@
 					</span>
 					<input
 						type="checkbox"
-						class="toggle toggle-secondary"
+						class="toggle transition-all duration-300 toggle-secondary"
 						bind:checked={userState.preferences.privateUpload}
 					/>
 				</label>

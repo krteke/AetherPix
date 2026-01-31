@@ -33,7 +33,7 @@
 	});
 </script>
 
-<div class="card mb-3 border border-base-200 bg-base-100 shadow-sm">
+<div class="card mb-3 border border-base-200 bg-base-100 shadow-sm transition-all duration-300">
 	<div class="card-body flex-row items-center gap-4 p-4">
 		<!-- 图标 -->
 		<div class="placeholder avatar">

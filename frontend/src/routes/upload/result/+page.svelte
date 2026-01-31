@@ -30,7 +30,7 @@
 
 		<div class="mb-8 text-center">
 			<h1 class="text-3xl font-bold">上传成功</h1>
-			<p class="text-base-content/60">共 {images.length} 张图片</p>
+			<p class="text-base-content/60 transition-all duration-300">共 {images.length} 张图片</p>
 		</div>
 
 		<!-- 1. 走马灯 Component -->

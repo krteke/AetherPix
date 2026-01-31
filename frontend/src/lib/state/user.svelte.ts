@@ -4,7 +4,7 @@ class UserState {
 	info = $state({
 		username: 'AdminUser',
 		email: 'admin@flashimg.com',
-		avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Felix',
+		avatar: '',
 		bio: '热爱摄影，热爱开源。'
 	});
 
