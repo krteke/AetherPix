@@ -7,9 +7,9 @@
 	let isDragging = $state(false);
 
 	// 待上传队列
-	let uploadQueue = $state<File[]>([]);
+	let uploadQueue: File[] = $state([]);
 	// 已完成的图片结果
-	let completedUploads = $state<UploadedFile[]>([]);
+	let completedUploads: UploadedFile[] = $state([]);
 
 	function handleFiles(files: FileList | null) {
 		if (!files || files.length === 0) return;
@@ -115,7 +115,7 @@
 					<h3 class="font-bold">上传完成!</h3>
 					<div class="text-xs">成功上传 {completedUploads.length} 张图片</div>
 				</div>
-				<button class="btn-white btn text-success-content btn-sm" onclick={goToDetails}>
+				<button class="btn text-success-content btn-sm btn-success" onclick={goToDetails}>
 					查看详情与链接
 				</button>
 			</div>

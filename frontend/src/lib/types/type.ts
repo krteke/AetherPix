@@ -6,8 +6,3 @@ export type UserResponse = {
 };
 
 export type UserRole = 'admin' | 'user';
-
-export type ErrorResponse = {
-	error: string;
-	description: string;
-};

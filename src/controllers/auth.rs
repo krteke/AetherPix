@@ -30,6 +30,7 @@ pub struct ResendVerificationParams {
 }
 
 const VERIFY_TOKEN_EXP_HOURS: i64 = 24;
+const RESET_TOKEN_EXP_MIN: i64 = 30;
 
 /// Register function creates a new user with the given parameters
 #[debug_handler]
@@ -75,7 +76,7 @@ async fn verify(
     Path(token): Path<String>,
 ) -> AppResult<impl IntoResponse> {
     let Ok(user) = users::Model::find_by_verification_token(&ctx.db, &token).await else {
-        return Err(AppError::InvalidVerifyToken);
+        return Err(AppError::InvalidToken);
     };
 
     if user.email_verified_at.is_some() {
@@ -87,7 +88,7 @@ async fn verify(
         let exp_time = send_at + chrono::Duration::hours(VERIFY_TOKEN_EXP_HOURS);
 
         if Local::now() > exp_time {
-            return Err(AppError::VerifyTokenOutdated);
+            return Err(AppError::TokenOutdated);
         }
     } else {
         return Err(AppError::InvalidRequest);
@@ -112,6 +113,7 @@ async fn forgot(
     let Ok(user) = users::Model::find_by_email(&ctx.db, &params.email).await else {
         // we don't want to expose our users email. if the email is invalid we still
         // returning success to the caller
+        tracing::debug!("Can not found user for email: {}", params.email);
         return format::json(());
     };
 
@@ -127,19 +129,32 @@ async fn forgot(
 
 /// reset user password by the given parameters
 #[debug_handler]
-async fn reset(State(ctx): State<AppContext>, Json(params): Json<ResetParams>) -> Result<Response> {
+async fn reset(
+    State(ctx): State<AppContext>,
+    Json(params): Json<ResetParams>,
+) -> AppResult<impl IntoResponse> {
     let Ok(user) = users::Model::find_by_reset_token(&ctx.db, &params.token).await else {
         // we don't want to expose our users email. if the email is invalid we still
         // returning success to the caller
         tracing::info!("reset token not found");
 
-        return format::json(());
+        return Ok(());
     };
+
+    if let Some(send_at) = user.reset_sent_at {
+        let exp_time = send_at + chrono::Duration::minutes(RESET_TOKEN_EXP_MIN);
+        if Local::now() > exp_time {
+            return Err(AppError::TokenOutdated);
+        }
+    } else {
+        return Err(AppError::InvalidRequest);
+    }
+
     user.into_active_model()
         .reset_password(&ctx.db, &params.password)
         .await?;
 
-    format::json(())
+    Ok(())
 }
 
 /// Creates a user login and returns a token

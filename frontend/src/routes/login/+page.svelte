@@ -148,6 +148,7 @@
 						id="username"
 						placeholder="username"
 						class="input-bordered input w-full"
+						minlength="2"
 						required
 					/>
 				</div>
@@ -174,12 +175,12 @@
 						bind:value={password}
 						type="password"
 						id="password"
-						placeholder="••••••••"
+						placeholder="••••••"
 						class="input-bordered input w-full"
+						minlength="6"
 						required
 					/>
 				</div>
-
 				{#if isRegister}
 					<div class="form-control animate-fade-in-down">
 						<label class="label" for="confirm-pass">
@@ -189,13 +190,20 @@
 							bind:value={confirmPassword}
 							type="password"
 							id="confirm-pass"
-							placeholder="••••••••"
+							placeholder="••••••"
 							class="input-bordered input w-full"
+							class:input-error={confirmPassword && password != confirmPassword}
 							required
 						/>
 					</div>
 				{/if}
+				{#if isRegister && confirmPassword && password !== confirmPassword}
+					<span class="text-error">两次输入的密码不一致</span>
+				{/if}
 
+				{#if !isRegister}
+					<a href={resolve('/auth/forgot')} class="ml-1 link font-bold link-primary"> 忘记密码 </a>
+				{/if}
 				{#if isRegister && sendReg}
 					<button class="btn mb-2 w-full btn-warning" disabled={isSending} onclick={resendEmail}>
 						{#if isSending}

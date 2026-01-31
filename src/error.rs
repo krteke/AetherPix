@@ -15,10 +15,10 @@ pub enum AppError {
     WrongCredentials,
     #[error("邮箱没有通过验证")]
     EmailNotVerified,
-    #[error("邮箱验证token已过期")]
-    VerifyTokenOutdated,
+    #[error("token已过期")]
+    TokenOutdated,
     #[error("无效的token")]
-    InvalidVerifyToken,
+    InvalidToken,
     #[error("无效的请求")]
     InvalidRequest,
     #[error(transparent)]
@@ -39,11 +39,11 @@ impl IntoResponse for AppError {
                 StatusCode::UNAUTHORIZED,
                 "此用户邮箱没有通过验证，请检查收件箱并点击链接激活账号".to_string(),
             ),
-            AppError::VerifyTokenOutdated => (
+            AppError::TokenOutdated => (
                 StatusCode::BAD_REQUEST,
                 "验证链接已过期，请重新发送".to_string(),
             ),
-            AppError::InvalidVerifyToken => (StatusCode::UNAUTHORIZED, "无效的token".to_string()),
+            AppError::InvalidToken => (StatusCode::UNAUTHORIZED, "无效的token".to_string()),
             AppError::InvalidRequest => (StatusCode::BAD_REQUEST, "无效的请求".to_string()),
             AppError::LocoError(e) => {
                 tracing::error!("{}", e);

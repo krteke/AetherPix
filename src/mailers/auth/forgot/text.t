@@ -1,3 +1,3 @@
 Reset your password with this link:
 
-http://localhost/reset#{{resetToken}}
+http://localhost:5173/auth/reset?token={{resetToken}}
