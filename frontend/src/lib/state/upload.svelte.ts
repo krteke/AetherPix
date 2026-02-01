@@ -1,4 +1,3 @@
-// src/lib/state/upload.svelte.ts
 export type UploadedFile = {
 	id: string;
 	url: string;
@@ -6,10 +5,9 @@ export type UploadedFile = {
 	size: string;
 	width: number;
 	height: number;
-	type: string; // e.g., 'image/png'
+	type: string;
 };
 
-// 使用 Svelte 5 $state 创建全局状态
 class UploadSession {
 	currentBatch = $state<UploadedFile[]>([]);
 

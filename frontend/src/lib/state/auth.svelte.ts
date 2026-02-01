@@ -19,6 +19,10 @@ class AuthStore {
 		return this.user?.role === 'admin';
 	}
 
+	get exists() {
+		return this.user !== null;
+	}
+
 	login(userData: User) {
 		this.user = userData;
 	}

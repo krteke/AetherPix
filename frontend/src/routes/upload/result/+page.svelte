@@ -5,6 +5,7 @@
 
 	import ResultCarousel from '$lib/components/ResultCarousel.svelte';
 	import ResultInfo from '$lib/components/ResultInfo.svelte';
+	import { resolve } from '$app/paths';
 
 	// 从全局状态获取图片
 	let images = $state(uploadSession.currentBatch);
@@ -13,7 +14,7 @@
 	// 如果没有图片（比如用户直接刷新了这个页面），重定向回首页
 	onMount(() => {
 		if (images.length === 0) {
-			goto('/');
+			goto(resolve('/'));
 		}
 	});
 </script>

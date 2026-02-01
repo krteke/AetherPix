@@ -31,6 +31,8 @@ mod keys {
     pub const AWS_REGION: &str = "aws_region";
     pub const AWS_ENDPOINT_URL: &str = "aws_endpoint_url";
 
+    pub const BUCKET_NAME: &str = "bucket_name";
+
     pub const DEFAULT_REGION: &str = "garage";
 }
 
@@ -76,6 +78,10 @@ impl SettingsService {
 
     pub async fn aws_endpoint_url() -> String {
         Self::get(keys::AWS_ENDPOINT_URL, "").await
+    }
+
+    pub async fn bucket_name() -> String {
+        Self::get(keys::BUCKET_NAME, "").await
     }
 
     pub async fn get_app_settings() -> AppSettings {

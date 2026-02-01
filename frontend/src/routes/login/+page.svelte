@@ -119,8 +119,8 @@
 				await register();
 			} else if (!userNameReg.test(username)) {
 				msg.alert('用户名只能包含字母、数字、下划线和短横线', '用户名格式不正确！', 'warning');
-			} else if (password.length < 6) {
-				msg.alert('密码至少6位', '密码长度太短', 'warning');
+			} else if (password.length < 8 && password.length > 128) {
+				msg.alert('密码长度至少为8位，最多128位', '密码长度不正确！', 'warning');
 			} else {
 				msg.alert('用户名长度至少为2个字符', '用户名长度不正确！', 'warning');
 			}
@@ -151,6 +151,7 @@
 						placeholder="username"
 						class="input-bordered input w-full transition-all duration-300"
 						minlength="2"
+						maxlength="32"
 						required
 					/>
 				</div>
@@ -165,6 +166,7 @@
 							id="email"
 							placeholder="example@example.com"
 							class="input-bordered input w-full transition-all duration-300"
+							maxlength="255"
 							required
 						/>
 					</div>
@@ -179,7 +181,8 @@
 						id="password"
 						placeholder="••••••"
 						class="input-bordered input w-full transition-all duration-300"
-						minlength="6"
+						minlength="8"
+						maxlength="128"
 						required
 					/>
 				</div>

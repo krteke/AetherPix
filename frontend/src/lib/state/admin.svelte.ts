@@ -1,5 +1,3 @@
-// src/lib/state/admin.svelte.ts
-
 type User = {
 	id: number;
 	name: string;

@@ -134,10 +134,11 @@
 						<input
 							type="password"
 							id="new-pass"
-							placeholder="至少 6 位字符"
+							placeholder="至少 8 位字符"
 							class="input w-full"
 							bind:value={password}
-							minlength="6"
+							minlength="8"
+							maxlength="128"
 							required
 						/>
 					</div>

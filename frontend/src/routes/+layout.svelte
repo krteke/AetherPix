@@ -5,6 +5,8 @@
 	import { onMount } from 'svelte';
 	import './layout.css';
 	import { auth } from '$lib/state/auth.svelte';
+	import { settingsStore } from '$lib/state/settings.svelte';
+	import { goto } from '$app/navigation';
 
 	let { children } = $props();
 
@@ -13,7 +15,13 @@
 	};
 
 	onMount(() => {
-		auth.init();
+		Promise.all([auth.init(), settingsStore.init()]);
+	});
+
+	$effect(() => {
+		if (settingsStore.exists && auth.exists) {
+			if (!settingsStore.allowEveryoneUpload && !auth.isLoggedIn) goto(resolve('/login'));
+		}
 	});
 </script>
 
@@ -35,7 +43,7 @@
 					<li><a href={resolve('/admin')}>控制面板</a></li>
 				{/if}
 				{#if auth.isLoggedIn}
-					<!-- <li><a href={resolve('/albums')} class="font-medium">图库</a></li> -->
+					<li><a href={resolve('/gallery')} class="font-medium">图库</a></li>
 					<li><a href={resolve('/settings')}>设置</a></li>
 					<li><button onclick={logout}>退出登录</button></li>
 				{:else}

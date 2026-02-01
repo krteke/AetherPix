@@ -19,7 +19,9 @@ use loco_rs::{
 use migration::Migrator;
 use std::{path::Path, sync::Arc};
 
-use crate::{common::settings::SettingsService, models::_entities::settings};
+use crate::{
+    common::settings::SettingsService, controllers::upload::S3Client, models::_entities::settings,
+};
 #[allow(unused_imports)]
 use crate::{controllers, models::_entities::users, tasks, workers::downloader::DownloadWorker};
 
@@ -87,7 +89,8 @@ impl Hooks for App {
             .await
             .expect("加载系统配置失败");
 
-        let s3_client = Arc::new(init_s3_client().await);
+        let bucket_name = SettingsService::bucket_name().await;
+        let s3_client = Arc::new(S3Client::new(init_s3_client().await, bucket_name));
 
         Ok(router.layer(Extension(s3_client)))
     }
@@ -102,6 +105,7 @@ async fn init_s3_client() -> Client {
     let credentials = Credentials::builder()
         .access_key_id(access_key_id)
         .secret_access_key(secret_access_key)
+        .provider_name("static")
         .build();
 
     let config = SdkConfig::builder()

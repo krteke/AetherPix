@@ -5,7 +5,7 @@ class MessageStore {
 	isOpen = $state(false);
 	title = $state('');
 	content = $state('');
-	type = $state<ModalType>('info');
+	type: ModalType = $state('info');
 	showCancel = $state(false);
 	confirmText = $state('确定');
 	cancelText = $state('取消');

@@ -1,133 +1,277 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { uploadSession, type UploadedFile } from '$lib/state/upload.svelte';
-	import UploadProgress from '$lib/components/UploadProgress.svelte';
+	import { uploadSession } from '$lib/state/upload.svelte';
 	import { resolve } from '$app/paths';
+	import { uploader, type UploadItem } from '$lib/state/uploader.svelte';
+	import UploadProgress from '$lib/components/UploadProgress.svelte';
 
 	let isDragging = $state(false);
 
-	// 待上传队列
-	let uploadQueue: File[] = $state([]);
-	// 已完成的图片结果
-	let completedUploads: UploadedFile[] = $state([]);
+	// 设置选项
+	let storageLocation: 'r2' | 'local' = $state('local');
+	let isPublic = $state(true);
+
+	// 核心队列
+	let queue = $derived(uploader.queue);
+	// 标记是否已经点击过开始，用于控制 Banner 显示时机
+	let hasStarted = $state(false);
 
 	function handleFiles(files: FileList | null) {
-		if (!files || files.length === 0) return;
-		// 将新文件加入队列，触发 UploadProgress 组件渲染
-		uploadQueue = [...uploadQueue, ...Array.from(files)];
+		if (!files) return;
+		uploader.addFiles(files);
 		isDragging = false;
 	}
 
-	// 当单个文件上传完成后的回调
-	function onUploadComplete(data: UploadedFile) {
-		completedUploads = [...completedUploads, data];
+	function startUpload() {
+		hasStarted = true;
+		// 触发并发调度器
+		uploader.processQueue();
 	}
 
-	// 检查是否全部完成
-	let isAllDone = $derived(
-		uploadQueue.length > 0 && uploadQueue.length === completedUploads.length
+	function retryUpload(item: UploadItem) {
+		uploader.retry(item);
+	}
+
+	// 计算属性：是否显示完成 Banner
+	// 逻辑：队列不为空 && 没有正在上传的任务 && 已经开始过流程
+	let isBatchComplete = $derived(
+		queue.length > 0 && hasStarted && !queue.some((i) => i.status === 'uploading')
 	);
 
+	// 计算属性：成功数量
+	let successCount = $derived(queue.filter((i) => i.status === 'success').length);
+
 	function goToDetails() {
-		// 保存数据到全局状态
-		uploadSession.setBatch(completedUploads);
-		// 跳转到新的详情页
+		const completed = queue.filter((i) => i.status === 'success' && i.result).map((i) => i.result!);
+
+		uploadSession.setBatch(completed);
 		goto(resolve('/upload/result/'));
 	}
 </script>
 
-<div class="mx-auto max-w-3xl py-10">
-	<div class="mb-8 text-center">
+<div class="mx-auto max-w-6xl px-4 py-10">
+	<div class="mb-10 text-center">
 		<h1 class="mb-2 text-4xl font-extrabold text-base-content transition-all duration-300">
 			上传图片
 		</h1>
 		<p class="text-base-content/60 transition-all duration-300">极速上传，全球分发</p>
 	</div>
 
-	<!-- 拖拽上传区域 -->
-	<div
-		class="card mb-8 cursor-pointer border-2 border-dashed transition-all duration-300
-        {isDragging
-			? 'scale-[1.01] border-primary bg-primary/10'
-			: 'border-base-300 bg-base-100 hover:border-primary/50'}"
-		tabindex="0"
-		role="button"
-		ondragover={(e) => {
-			e.preventDefault();
-			isDragging = true;
-		}}
-		ondragleave={() => (isDragging = false)}
-		ondrop={(e) => {
-			e.preventDefault();
-			handleFiles(e.dataTransfer?.files || null);
-		}}
-	>
-		<div class="card-body items-center py-10 text-center">
-			<svg
-				xmlns="http://www.w3.org/2000/svg"
-				fill="none"
-				viewBox="0 0 24 24"
-				stroke-width="1.5"
-				stroke="currentColor"
-				class="mb-4 h-12 w-12 text-primary"
+	<div class="grid grid-cols-1 items-start gap-8 lg:grid-cols-3">
+		<div class="space-y-6 lg:col-span-2">
+			<div
+				class="card cursor-pointer border-2 border-dashed transition-all duration-300
+                {isDragging
+					? 'scale-[1.01] border-primary bg-primary/10'
+					: 'border-base-300 bg-base-100 hover:border-primary/50'}"
+				tabindex="0"
+				role="button"
+				ondragover={(e) => {
+					e.preventDefault();
+					isDragging = true;
+				}}
+				ondragleave={() => (isDragging = false)}
+				ondrop={(e) => {
+					e.preventDefault();
+					handleFiles(e.dataTransfer?.files || null);
+				}}
 			>
-				<path
-					stroke-linecap="round"
-					stroke-linejoin="round"
-					d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"
-				/>
-			</svg>
-			<h3 class="text-lg font-bold">点击或拖拽文件</h3>
-			<input
-				type="file"
-				id="fileInput"
-				class="hidden"
-				multiple
-				accept="image/*"
-				onchange={(e) => handleFiles(e.currentTarget.files)}
-			/>
-			<label for="fileInput" class="btn mt-4 transition-all duration-300 btn-sm btn-primary"
-				>选择文件</label
+				<div class="card-body items-center py-12 text-center">
+					<svg
+						xmlns="http://www.w3.org/2000/svg"
+						fill="none"
+						viewBox="0 0 24 24"
+						stroke-width="1.5"
+						stroke="currentColor"
+						class="mb-4 h-12 w-12 text-primary"
+					>
+						<path
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"
+						/>
+					</svg>
+					<h3 class="text-lg font-bold">点击或拖拽文件</h3>
+					<p class="text-sm opacity-60">支持 JPG, PNG, GIF, WebP</p>
+					<input
+						type="file"
+						id="fileInput"
+						class="hidden"
+						multiple
+						accept="image/*"
+						onchange={(e) => handleFiles(e.currentTarget.files)}
+					/>
+					<label for="fileInput" class="btn mt-4 transition-all duration-300 btn-sm btn-primary"
+						>选择文件</label
+					>
+				</div>
+			</div>
+
+			<!-- 文件列表 -->
+			{#if queue.length > 0}
+				<div class="mb-2 flex items-center justify-between">
+					<span class="text-sm font-bold text-base-content/50 transition-all duration-300"
+						>文件列表 ({queue.length})</span
+					>
+					{#if !hasStarted || queue.some((i) => i.status === 'pending')}
+						<button
+							class="btn animate-pulse transition-all duration-300 btn-sm btn-primary"
+							onclick={startUpload}
+						>
+							<svg
+								xmlns="http://www.w3.org/2000/svg"
+								fill="none"
+								viewBox="0 0 24 24"
+								stroke-width="1.5"
+								stroke="currentColor"
+								class="mr-1 h-4 w-4"
+							>
+								<path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+							</svg>
+							开始上传
+						</button>
+					{:else if queue.some((i) => i.status === 'error')}
+						<button
+							class="btn transition-all duration-300 btn-sm btn-warning"
+							onclick={startUpload}
+						>
+							重试失败文件
+						</button>
+					{/if}
+				</div>
+
+				<div class="flex flex-col gap-2">
+					{#each queue as item (item.name)}
+						<UploadProgress {item} onRetry={() => retryUpload(item)} />
+					{/each}
+				</div>
+
+				<!-- 完成提示框 -->
+				{#if isBatchComplete}
+					<div
+						class="animate-bounce-in mt-6 alert transition-all duration-300 {successCount ===
+						queue.length
+							? 'alert-success'
+							: 'alert-warning'} shadow-lg"
+					>
+						{#if successCount === queue.length}
+							<svg
+								xmlns="http://www.w3.org/2000/svg"
+								class="h-6 w-6 shrink-0 stroke-current"
+								fill="none"
+								viewBox="0 0 24 24"
+								><path
+									stroke-linecap="round"
+									stroke-linejoin="round"
+									stroke-width="2"
+									d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+								/></svg
+							>
+						{:else}
+							<svg
+								xmlns="http://www.w3.org/2000/svg"
+								class="h-6 w-6 shrink-0 stroke-current"
+								fill="none"
+								viewBox="0 0 24 24"
+								><path
+									stroke-linecap="round"
+									stroke-linejoin="round"
+									stroke-width="2"
+									d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+								/></svg
+							>
+						{/if}
+
+						<div class=" transition-all duration-300">
+							<h3 class="font-bold">处理完成</h3>
+							<div class="text-xs">成功: {successCount} / 总数: {queue.length}</div>
+							{#if successCount < queue.length}
+								<div class="text-xs opacity-70">部分文件上传失败，请点击右侧按钮重试。</div>
+							{/if}
+						</div>
+
+						{#if successCount > 0}
+							<button
+								class="btn border-none bg-base-100 text-base-content transition-all duration-300 btn-sm hover:bg-base-200"
+								onclick={goToDetails}
+							>
+								查看成功详情
+							</button>
+						{/if}
+					</div>
+				{/if}
+			{/if}
+		</div>
+
+		<div class="lg:col-span-1">
+			<div
+				class="card sticky top-8 border border-base-200 bg-base-100 shadow-xl transition-all duration-300"
 			>
+				<div class="card-body">
+					<h2 class="mb-4 card-title text-lg">上传设置</h2>
+
+					<!-- 存储位置选择 -->
+					<div class="form-control w-full">
+						<label class="label" for="location-select">
+							<span class="label-text font-medium">存储位置</span>
+						</label>
+						<select
+							id="location-select"
+							class="select-bordered select w-full transition-all duration-300"
+							bind:value={storageLocation}
+						>
+							<option value="r2">Cloudflare R2</option>
+							<!-- <option value="s3">Amazon S3</option> -->
+							<!-- <option value="github">GitHub Repo</option> -->
+							<option value="local">Local VPS</option>
+						</select>
+						<div class="label">
+							<span class="label-text-alt opacity-60">当前剩余空间: 充足</span>
+						</div>
+					</div>
+
+					<div class="divider my-2"></div>
+
+					<!-- 访问权限 -->
+					<div class="form-control">
+						<label class="label cursor-pointer">
+							<span class="label-text font-medium">公开访问</span>
+							<input
+								type="checkbox"
+								class="toggle transition-all duration-300 toggle-primary"
+								bind:checked={isPublic}
+							/>
+						</label>
+						<div class="px-1 text-xs text-base-content/60 transition-all duration-300">
+							{isPublic
+								? '任何持有链接的人都可以访问图片。'
+								: '不生成访问链接，只有设置密码或时效后才生成临时链接。'}
+						</div>
+					</div>
+
+					<div class="divider my-2"></div>
+
+					<!-- 信息汇总 -->
+					<div class="space-y-2 rounded-lg bg-base-200 p-3 text-sm transition-all duration-300">
+						<div class="flex justify-between">
+							<span class="opacity-70">待传文件:</span>
+							<span class="font-bold">{queue.filter((i) => i.status === 'pending').length}</span>
+						</div>
+						<div class="flex justify-between">
+							<!-- <span class="opacity-70">预计耗时:</span>
+							<span>~{queue.length * 2}s</span> -->
+							<span class="opacity-70">失败文件:</span>
+							<span class="font-bold">{queue.filter((i) => i.status === 'error').length}</span>
+						</div>
+						<div class="flex justify-between">
+							<span class="opacity-70">成功文件:</span>
+							<span class="font-bold">{queue.filter((i) => i.status === 'success').length}</span>
+						</div>
+					</div>
+				</div>
+			</div>
 		</div>
 	</div>
-
-	<!-- 上传进度列表 -->
-	{#if uploadQueue.length > 0}
-		<div class="divider text-sm font-bold text-base-content/50">上传队列</div>
-
-		{#each uploadQueue as file (file.name + file.lastModified)}
-			<UploadProgress {file} onComplete={onUploadComplete} />
-		{/each}
-
-		<!-- 全部完成后显示的 Banner -->
-		{#if isAllDone}
-			<div class="animate-bounce-in mt-6 alert alert-success shadow-lg transition-all duration-300">
-				<svg
-					xmlns="http://www.w3.org/2000/svg"
-					class="h-6 w-6 shrink-0 stroke-current"
-					fill="none"
-					viewBox="0 0 24 24"
-					><path
-						stroke-linecap="round"
-						stroke-linejoin="round"
-						stroke-width="2"
-						d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-					/></svg
-				>
-				<div>
-					<h3 class="font-bold">上传完成!</h3>
-					<div class="text-xs">成功上传 {completedUploads.length} 张图片</div>
-				</div>
-				<button
-					class="btn text-success-content transition-all duration-300 btn-sm btn-success"
-					onclick={goToDetails}
-				>
-					查看详情与链接
-				</button>
-			</div>
-		{/if}
-	{/if}
 </div>
 
 <style>
