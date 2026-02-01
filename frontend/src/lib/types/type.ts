@@ -6,3 +6,10 @@ export type UserResponse = {
 };
 
 export type UserRole = 'admin' | 'user';
+
+export type AppSettings = {
+	uploadMaxSize: number;
+	allowRegistration: boolean;
+	siteName: string;
+	allowEveryoneUpload: boolean;
+};

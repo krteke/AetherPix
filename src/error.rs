@@ -59,9 +59,6 @@ impl IntoResponse for AppError {
                     "服务器内部错误".to_string(),
                 )
             }
-            _ => {
-                todo!()
-            }
         };
 
         let body = Json(serde_json::json!({

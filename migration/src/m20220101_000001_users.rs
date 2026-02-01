@@ -13,8 +13,8 @@ impl MigrationTrait for Migration {
             &[
                 ("id", ColType::PkAuto),
                 ("pid", ColType::Uuid),
-                ("email", ColType::StringUniq),
-                ("username", ColType::StringUniq),
+                ("email", ColType::StringLenUniq(255)),
+                ("username", ColType::StringLenUniq(32)),
                 (
                     "role",
                     ColType::EnumWithDefault(
@@ -23,7 +23,7 @@ impl MigrationTrait for Migration {
                         "user".to_string(),
                     ),
                 ),
-                ("password", ColType::String),
+                ("password", ColType::StringLen(255)),
                 ("api_key", ColType::StringUniq),
                 ("reset_token", ColType::StringNull),
                 ("reset_sent_at", ColType::TimestampWithTimeZoneNull),

@@ -23,21 +23,21 @@ pub struct LoginParams {
 
 #[derive(Debug, Deserialize, Serialize, Validate)]
 pub struct RegisterParams {
-    #[validate(email(message = "邮箱格式错误"))]
+    #[validate(email(message = "邮箱格式错误"), length(max = 255))]
     pub email: String,
-    #[validate(length(min = 2, message = "用户名至少需要两个字符"))]
+    #[validate(length(min = 2, max = 32, message = "用户名长度必须在2到32之间"))]
     #[validate(regex(path = get_allow_username_re(), message = "用户名只能包含字母、数字、_ 和 -"))]
     pub username: String,
-    #[validate(length(min = 6, message = "密码太短, 至少需要6个字符"))]
+    #[validate(length(min = 8, max = 128, message = "密码长度必须在8到128之间"))]
     pub password: String,
 }
 
 #[derive(Debug, Validate, Deserialize)]
 pub struct Validator {
-    #[validate(length(min = 2, message = "用户名至少需要两个字符"))]
+    #[validate(length(min = 2, max = 32, message = "用户名长度必须在2到32之间"))]
     #[validate(regex(path = get_allow_username_re(), message = "用户名只能包含字母、数字、_ 和 -"))]
     pub username: String,
-    #[validate(email(message = "invalid email"))]
+    #[validate(email(message = "邮箱格式错误"), length(max = 255))]
     pub email: String,
 }
 
