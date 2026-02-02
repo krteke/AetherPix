@@ -20,7 +20,8 @@ use migration::Migrator;
 use std::{path::Path, sync::Arc};
 
 use crate::{
-    common::settings::SettingsService, controllers::upload::S3Client, models::_entities::settings,
+    common::{client::S3Client, settings::SettingsService},
+    models::_entities::settings,
 };
 #[allow(unused_imports)]
 use crate::{controllers, models::_entities::users, tasks, workers::downloader::DownloadWorker};
@@ -59,6 +60,7 @@ impl Hooks for App {
             .add_route(controllers::auth::routes())
             .add_route(controllers::settings::routes())
             .add_route(controllers::upload::routes())
+            .add_route(controllers::view::routes())
     }
     async fn connect_workers(ctx: &AppContext, queue: &Queue) -> Result<()> {
         queue.register(DownloadWorker::build(ctx)).await?;

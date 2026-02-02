@@ -1,4 +1,3 @@
-use aws_sdk_s3::Client;
 use aws_sdk_s3::primitives::ByteStream;
 use axum::Extension;
 use loco_rs::prelude::*;
@@ -10,17 +9,13 @@ use std::{path::Path, sync::Arc};
 use tokio::fs::{self, File};
 use tokio::io::AsyncWriteExt;
 
+use crate::common::client::S3Client;
 use crate::common::settings::SettingsService;
 use crate::models::images;
 use crate::models::users::users;
 use crate::views::upload::UploadResponse;
 
 const TEMP_DIR: &str = "tmp_upload";
-
-pub struct S3Client {
-    client: Client,
-    bucket: String,
-}
 
 #[derive(Debug, Deserialize)]
 pub struct UploadParams {
@@ -35,12 +30,6 @@ pub struct UploadResult {
     // pub status: String,
 }
 
-impl S3Client {
-    pub fn new(client: Client, bucket: String) -> Self {
-        Self { client, bucket }
-    }
-}
-
 async fn upload(
     State(ctx): State<AppContext>,
     Extension(s3_client): Extension<Arc<S3Client>>,
@@ -52,7 +41,7 @@ async fn upload(
     }
     let base_url = ctx.config.server.full_url();
 
-    match upload_files(multipart, s3_client.clone(), &s3_client.bucket, &base_url).await {
+    match upload_files(multipart, s3_client.clone(), &base_url).await {
         Ok(r) => {
             images::Model::create_with_upload_result(&ctx.db, &r).await?;
             format::json(UploadResponse::from(r))
@@ -75,7 +64,7 @@ async fn upload_with_jwt(
     let user = users::Model::find_by_pid(&ctx.db, &jwt.claims.pid).await?;
     let base_url = ctx.config.server.full_url();
 
-    match upload_files(multipart, s3_client.clone(), &s3_client.bucket, &base_url).await {
+    match upload_files(multipart, s3_client.clone(), &base_url).await {
         Ok(mut r) => {
             r.is_public = upload_params.public;
             r.user_id = Some(user.pid);
@@ -96,6 +85,7 @@ async fn upload_with_jwt(
     }
 }
 
+// TODO: implement upload_with_token
 async fn upload_with_token(
     auth: auth::ApiToken<users::Model>,
     State(ctx): State<AppContext>,
@@ -103,7 +93,7 @@ async fn upload_with_token(
     Query(upload_params): Query<UploadParams>,
     multipart: Multipart,
 ) -> Result<Response> {
-    todo!()
+    format::json(())
 }
 
 struct TempFileGuard(PathBuf);
@@ -124,7 +114,6 @@ impl Drop for TempFileGuard {
 async fn upload_files(
     mut multipart: Multipart,
     client: Arc<S3Client>,
-    bucket: &str,
     base_url: &str,
 ) -> Result<UploadResult> {
     tokio::fs::create_dir_all(TEMP_DIR).await?;
@@ -163,15 +152,7 @@ async fn upload_files(
             return Err(Error::BadRequest("Invalid file type".to_string()));
         }
 
-        let s3_result = client
-            .client
-            .put_object()
-            .bucket(bucket)
-            .key(&file_name)
-            .body(body)
-            .content_type(mime.as_ref())
-            .send()
-            .await;
+        let s3_result = client.pub_object(&file_name, body, mime.as_ref()).await;
 
         drop(tmp_file_guard);
 

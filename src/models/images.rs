@@ -23,11 +23,31 @@ impl ActiveModelBehavior for ActiveModel {
 
 // implement your read-oriented logic here
 impl Model {
-    pub async fn find_image_by_user_pid(
-        db: &DatabaseConnection,
-        pid: Uuid,
-    ) -> ModelResult<Vec<Self>> {
-        todo!()
+    pub async fn find_by_user_pid(db: &DatabaseConnection, pid: Uuid) -> ModelResult<Vec<Self>> {
+        let images = images::Entity::find()
+            .filter(
+                model::query::condition()
+                    .eq(images::Column::UserPid, pid)
+                    .build(),
+            )
+            .all(db)
+            .await?;
+
+        Ok(images)
+    }
+
+    pub async fn find_by_filename(db: &DatabaseConnection, filename: &str) -> ModelResult<Self> {
+        let images = images::Entity::find()
+            .filter(
+                model::query::condition()
+                    .eq(images::Column::FileName, filename)
+                    .eq(images::Column::Public, true)
+                    .build(),
+            )
+            .one(db)
+            .await?;
+
+        images.ok_or_else(|| ModelError::EntityNotFound)
     }
 
     pub async fn create_with_upload_result(
@@ -37,7 +57,11 @@ impl Model {
         let txn = db.begin().await?;
 
         if images::Entity::find()
-            .filter(model::query::condition().eq(images::Column::Url, &upload_result.url))
+            .filter(
+                model::query::condition()
+                    .eq(images::Column::Url, &upload_result.url)
+                    .build(),
+            )
             .one(&txn)
             .await?
             .is_some()
