@@ -10,37 +10,37 @@ default-run = "aether_pix-cli"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [workspace.dependencies]
-loco-rs = { version = "0.16" }
+loco-rs = { version = "0.16.4" }
 
 [dependencies]
 loco-rs = { workspace = true }
-serde = { version = "1", features = ["derive"] }
-serde_json = { version = "1" }
-tokio = { version = "1.45", default-features = false, features = [
+serde = { version = "1.0.228", features = ["derive"] }
+serde_json = { version = "1.0.149" }
+tokio = { version = "1.49.0", default-features = false, features = [
     "rt-multi-thread",
 ] }
-async-trait = { version = "0.1" }
-axum = { version = "0.8" }
-tracing = { version = "0.1" }
-tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
-regex = { version = "1.11" }
+async-trait = { version = "0.1.89" }
+axum = { version = "0.8.8" }
+tracing = { version = "0.1.44" }
+tracing-subscriber = { version = "0.3.22", features = ["env-filter", "json"] }
+regex = { version = "1.12.2" }
 migration = { path = "migration" }
-sea-orm = { version = "1.1", features = [
+sea-orm = { version = "1.1.19", features = [
     "sqlx-sqlite",
     "sqlx-postgres",
     "runtime-tokio-rustls",
     "macros",
 ] }
-chrono = { version = "0.4" }
-validator = { version = "0.20" }
-uuid = { version = "1.6", features = ["v4", "v7"] }
+chrono = { version = "0.4.43" }
+validator = { version = "0.20.0" }
+uuid = { version = "1.20.0", features = ["v4", "v7"] }
 include_dir = { version = "0.7" }
-axum-extra = { version = "0.10", features = ["form"] }
+axum-extra = { version = "0.12.5", features = ["form"] }
 image = { version = "0.25.9" }
 cookie = { version = "0.18.1" }
-thiserror = "*"
+thiserror = "2.0.18"
 aws-sdk-s3 = { version = "1.121.0", features = ["behavior-version-latest"] }
-aws-config = { version = "1.1.7", features = ["behavior-version-latest"] }
+aws-config = { version = "1.8.12", features = ["behavior-version-latest"] }
 mime_guess2 = { version = "2.3.1" }
 tokio-util = { version = "0.7.18", features = ["io"] }
 
