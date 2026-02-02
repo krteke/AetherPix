@@ -11,12 +11,47 @@
 	let images = $state(uploadSession.currentBatch);
 	let activeIndex = $state(0);
 
-	// 如果没有图片（比如用户直接刷新了这个页面），重定向回首页
 	onMount(() => {
 		if (images.length === 0) {
 			goto(resolve('/'));
 		}
+
+		images.forEach((i) => {
+			i.name = i.rawFile.name;
+			i.size = i.rawFile.size;
+			i.type = i.rawFile.type;
+			i.previewUrl = URL.createObjectURL(i.rawFile);
+			const { height, width } = getImageHW(i.rawFile);
+			i.height = height;
+			i.width = width;
+		});
+
+		return () => {
+			images.forEach((i) => {
+				URL.revokeObjectURL(i.previewUrl!);
+			});
+		};
 	});
+
+	function getImageHW(file: File): { height: number; width: number } {
+		const img = new Image();
+		const url = URL.createObjectURL(file);
+
+		img.onload = () => {
+			const height = img.height;
+			const width = img.width;
+			URL.revokeObjectURL(url);
+			return { height, width };
+		};
+
+		img.onerror = () => {
+			URL.revokeObjectURL(url);
+			return { height: 0, width: 0 };
+		};
+
+		img.src = url;
+		return { height: 0, width: 0 };
+	}
 </script>
 
 {#if images.length > 0}
@@ -24,7 +59,7 @@
 		<!-- 顶部导航面包屑 -->
 		<div class="breadcrumbs mb-6 text-sm">
 			<ul>
-				<li><a href="/">首页</a></li>
+				<li><a href={resolve('/')}>首页</a></li>
 				<li>上传结果</li>
 			</ul>
 		</div>
@@ -34,18 +69,14 @@
 			<p class="text-base-content/60 transition-all duration-300">共 {images.length} 张图片</p>
 		</div>
 
-		<!-- 1. 走马灯 Component -->
-		<!-- 绑定 activeIndex，这样父组件知道当前在看哪张图 -->
 		<ResultCarousel {images} bind:activeIndex />
 
 		<div class="divider my-8"></div>
 
-		<!-- 2. 信息详情 Component -->
-		<!-- 传入当前激活的图片对象 -->
 		<ResultInfo image={images[activeIndex]} />
 
 		<div class="mt-12 flex justify-center">
-			<a href="/" class="btn btn-ghost">继续上传</a>
+			<a href={resolve('/')} class="btn btn-ghost">继续上传</a>
 		</div>
 	</div>
 {/if}

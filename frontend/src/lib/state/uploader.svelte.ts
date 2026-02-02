@@ -1,11 +1,17 @@
+import type { UploadResponse } from '$lib/types/type';
+import { auth } from './auth.svelte';
+import { settingsStore } from './settings.svelte';
 import type { UploadedFile } from './upload.svelte';
 
 export type UploadStatus = 'pending' | 'uploading' | 'success' | 'error';
+
+export type UploadLocation = 'r2' | 'local';
 
 export interface UploadItem {
 	name: string;
 	file: File;
 	status: UploadStatus;
+	isPublic: boolean;
 	progress: number; // 0-100
 	speed: string; // e.g., "1.2 MB/s"
 	loaded: number; // 已上传字节数
@@ -24,14 +30,26 @@ class UploadManager {
 	queue: UploadItem[] = $state([]);
 	// 最大并发数
 	concurrency = 3;
-	// API 地址
-	uploadUrl = '/api/upload';
+	uploadLocation: UploadLocation = $state('local');
+
+	uploadUrl = $derived(() => {
+		if (this.uploadLocation === 'local') {
+			if (auth.isLoggedIn) return '/api/upload/jwt';
+			else if (settingsStore.allowEveryoneUpload) return '/api/upload';
+		} else if (this.uploadLocation === 'r2') {
+			if (auth.isLoggedIn) return '';
+			else if (settingsStore.allowEveryoneUpload) return '';
+		}
+
+		return '';
+	});
 
 	// 添加文件到队列
 	addFiles(files: FileList) {
 		const newItems: UploadItem[] = Array.from(files).map((file) => ({
 			name: file.name,
 			file,
+			isPublic: true,
 			status: 'pending',
 			progress: 0,
 			speed: '0 KB/s',
@@ -109,7 +127,11 @@ class UploadManager {
 				item.progress = 100;
 				item.speed = '';
 				try {
-					item.response = JSON.parse(xhr.responseText);
+					item.response = JSON.parse(xhr.responseText) as UploadResponse;
+					item.result = {
+						url: item.response.url,
+						rawFile: item.file
+					};
 				} catch {
 					item.response = xhr.responseText;
 				}
@@ -134,12 +156,10 @@ class UploadManager {
 		};
 
 		// 发送请求
-		xhr.open('POST', this.uploadUrl, true);
+		xhr.open('POST', `${this.uploadUrl()}?public=${item.isPublic}`, true);
 
 		const formData = new FormData();
 		formData.append('file', item.file);
-		// 可以在这里 append 其他参数，比如 storageLocation
-		// formData.append('strategy', 'r2');
 
 		xhr.send(formData);
 	}

@@ -13,3 +13,7 @@ export type AppSettings = {
 	siteName: string;
 	allowEveryoneUpload: boolean;
 };
+
+export type UploadResponse = {
+	url: string;
+};

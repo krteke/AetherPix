@@ -2,19 +2,26 @@
 	import { goto } from '$app/navigation';
 	import { uploadSession } from '$lib/state/upload.svelte';
 	import { resolve } from '$app/paths';
-	import { uploader, type UploadItem } from '$lib/state/uploader.svelte';
+	import { uploader, type UploadItem, type UploadLocation } from '$lib/state/uploader.svelte';
 	import UploadProgress from '$lib/components/UploadProgress.svelte';
+	import { auth } from '$lib/state/auth.svelte';
 
 	let isDragging = $state(false);
 
 	// 设置选项
-	let storageLocation: 'r2' | 'local' = $state('local');
+	let storageLocation: UploadLocation = $state(uploader.uploadLocation);
 	let isPublic = $state(true);
 
 	// 核心队列
 	let queue = $derived(uploader.queue);
 	// 标记是否已经点击过开始，用于控制 Banner 显示时机
 	let hasStarted = $state(false);
+
+	$effect(() => {
+		queue.forEach((item) => {
+			item.isPublic = isPublic;
+		});
+	});
 
 	function handleFiles(files: FileList | null) {
 		if (!files) return;
@@ -230,25 +237,26 @@
 						</div>
 					</div>
 
-					<div class="divider my-2"></div>
+					{#if auth.exists}
+						<div class="divider my-2"></div>
 
-					<!-- 访问权限 -->
-					<div class="form-control">
-						<label class="label cursor-pointer">
-							<span class="label-text font-medium">公开访问</span>
-							<input
-								type="checkbox"
-								class="toggle transition-all duration-300 toggle-primary"
-								bind:checked={isPublic}
-							/>
-						</label>
-						<div class="px-1 text-xs text-base-content/60 transition-all duration-300">
-							{isPublic
-								? '任何持有链接的人都可以访问图片。'
-								: '不生成访问链接，只有设置密码或时效后才生成临时链接。'}
+						<!-- 访问权限 -->
+						<div class="form-control">
+							<label class="label cursor-pointer">
+								<span class="label-text font-medium">公开访问</span>
+								<input
+									type="checkbox"
+									class="toggle transition-all duration-300 toggle-primary"
+									bind:checked={isPublic}
+								/>
+							</label>
+							<div class="px-1 text-xs text-base-content/60 transition-all duration-300">
+								{isPublic
+									? '任何持有链接的人都可以访问图片。'
+									: '不生成访问链接，只有设置密码或时效后才生成临时链接。'}
+							</div>
 						</div>
-					</div>
-
+					{/if}
 					<div class="divider my-2"></div>
 
 					<!-- 信息汇总 -->

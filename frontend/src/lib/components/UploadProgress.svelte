@@ -1,17 +1,28 @@
 <script lang="ts">
 	import type { UploadItem } from '$lib/state/uploader.svelte';
+	import { onMount } from 'svelte';
 
 	let { item, onRetry } = $props<{
 		item: UploadItem;
 		onRetry: () => void;
 	}>();
+
+	let url = $state('');
+
+	onMount(() => {
+		url = URL.createObjectURL(item.file);
+
+		return () => {
+			URL.revokeObjectURL(url);
+		};
+	});
 </script>
 
 <div class="card mb-3 border border-base-200 bg-base-100 shadow-sm transition-all duration-300">
 	<div class="card-body flex-row items-center gap-4 p-4">
 		<div class="placeholder avatar">
 			<div class="h-12 w-12 rounded bg-neutral text-neutral-content">
-				<span class="text-xs uppercase">{item.name.split('.').pop()?.slice(0, 4)}</span>
+				<img src={url} alt={item.name} class="h-full w-full rounded object-cover" />
 			</div>
 		</div>
 

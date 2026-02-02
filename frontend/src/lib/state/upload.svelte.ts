@@ -1,15 +1,16 @@
 export type UploadedFile = {
-	id: string;
-	url: string;
-	name: string;
-	size: string;
-	width: number;
-	height: number;
-	type: string;
+	url: string | null;
+	name?: string;
+	size?: number;
+	width?: number;
+	height?: number;
+	type?: string;
+	previewUrl?: string;
+	rawFile: File;
 };
 
 class UploadSession {
-	currentBatch = $state<UploadedFile[]>([]);
+	currentBatch: UploadedFile[] = $state([]);
 
 	setBatch(files: UploadedFile[]) {
 		this.currentBatch = files;

@@ -1,7 +1,8 @@
 <script lang="ts">
+	import { msg } from '$lib/state/msg.svelte';
 	import type { UploadedFile } from '$lib/state/upload.svelte';
 
-	let { image } = $props<{ image: UploadedFile }>();
+	const { image }: { image: UploadedFile } = $props();
 
 	// 链接类型定义
 	const linkTypes = ['Raw Link', 'Markdown', 'HTML', 'BBCode'];
@@ -9,6 +10,7 @@
 
 	// 根据选择的类型生成链接
 	let displayLink = $derived.by(() => {
+		if (image.url === null) return '';
 		switch (selectedType) {
 			case 'Raw Link':
 				return image.url;
@@ -25,7 +27,7 @@
 
 	function copyLink() {
 		navigator.clipboard.writeText(displayLink);
-		alert('链接已复制！');
+		msg.alert('链接已复制！');
 	}
 </script>
 
@@ -39,7 +41,6 @@
 
 			<div class="flex flex-col gap-4">
 				<div class="join w-full">
-					<!-- 1. 下拉菜单选择格式 -->
 					<select
 						class="select-bordered select join-item w-32 bg-base-200 transition-all duration-300"
 						bind:value={selectedType}
@@ -49,7 +50,6 @@
 						{/each}
 					</select>
 
-					<!-- 2. 链接显示框 -->
 					<input
 						type="text"
 						class="input-bordered input join-item w-full font-mono text-sm transition-all duration-300"
@@ -57,7 +57,6 @@
 						readonly
 					/>
 
-					<!-- 3. 复制按钮 -->
 					<button class="btn join-item transition-all duration-300 btn-primary" onclick={copyLink}>
 						复制
 					</button>
@@ -79,7 +78,7 @@
 			<div class="flex flex-col gap-3 text-sm">
 				<div class="flex justify-between border-b border-base-200 pb-2">
 					<span class="opacity-60">文件名</span>
-					<span class="max-w-[150px] truncate font-medium" title={image.name}>{image.name}</span>
+					<span class="max-w-37.5 truncate font-medium" title={image.name}>{image.name}</span>
 				</div>
 				<div class="flex justify-between border-b border-base-200 pb-2">
 					<span class="opacity-60">文件大小</span>
@@ -95,15 +94,17 @@
 				</div>
 			</div>
 
-			<div class="mt-4 card-actions">
-				<a
-					href={image.url}
-					download={image.name}
-					class="btn w-full transition-all duration-300 btn-outline btn-sm"
-				>
-					下载文件
-				</a>
-			</div>
+			{#if image.url !== null}
+				<div class="mt-4 card-actions">
+					<a
+						href={image.url}
+						download={image.name}
+						class="btn w-full transition-all duration-300 btn-outline btn-sm"
+					>
+						下载文件
+					</a>
+				</div>
+			{/if}
 		</div>
 	</div>
 </div>
