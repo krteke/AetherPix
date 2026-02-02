@@ -5,6 +5,7 @@ use loco_rs::prelude::*;
 use mime_guess2::mime;
 use serde::Deserialize;
 use std::fmt::Write;
+use std::path::PathBuf;
 use std::{path::Path, sync::Arc};
 use tokio::fs::{self, File};
 use tokio::io::AsyncWriteExt;
@@ -43,7 +44,7 @@ impl S3Client {
 async fn upload(
     State(ctx): State<AppContext>,
     Extension(s3_client): Extension<Arc<S3Client>>,
-    Query(upload_params): Query<UploadParams>,
+    // Query(upload_params): Query<UploadParams>,
     multipart: Multipart,
 ) -> Result<Response> {
     if !SettingsService::allow_everyone_upload().await {
@@ -52,15 +53,9 @@ async fn upload(
     let base_url = ctx.config.server.full_url();
 
     match upload_files(multipart, s3_client.clone(), &s3_client.bucket, &base_url).await {
-        Ok(mut r) => {
-            r.is_public = upload_params.public;
+        Ok(r) => {
             images::Model::create_with_upload_result(&ctx.db, &r).await?;
-            let res = if upload_params.public {
-                UploadResponse { url: Some(r.url) }
-            } else {
-                UploadResponse { url: None }
-            };
-            format::json(res)
+            format::json(UploadResponse::from(r))
         }
         Err(e) => {
             tracing::error!("Failed to upload files: {}", e);
@@ -77,7 +72,28 @@ async fn upload_with_jwt(
     Query(upload_params): Query<UploadParams>,
     multipart: Multipart,
 ) -> Result<Response> {
-    todo!()
+    let user = users::Model::find_by_pid(&ctx.db, &jwt.claims.pid).await?;
+    let base_url = ctx.config.server.full_url();
+
+    match upload_files(multipart, s3_client.clone(), &s3_client.bucket, &base_url).await {
+        Ok(mut r) => {
+            r.is_public = upload_params.public;
+            r.user_id = Some(user.pid);
+
+            images::Model::create_with_upload_result(&ctx.db, &r).await?;
+            let res = if upload_params.public {
+                UploadResponse { url: Some(r.url) }
+            } else {
+                UploadResponse { url: None }
+            };
+            format::json(res)
+        }
+        Err(e) => {
+            tracing::error!("Failed to upload files: {}", e);
+
+            Err(Error::InternalServerError)
+        }
+    }
 }
 
 async fn upload_with_token(
@@ -88,6 +104,21 @@ async fn upload_with_token(
     multipart: Multipart,
 ) -> Result<Response> {
     todo!()
+}
+
+struct TempFileGuard(PathBuf);
+
+impl Drop for TempFileGuard {
+    fn drop(&mut self) {
+        let path = self.0.clone();
+        if path.exists() {
+            tokio::spawn(async move {
+                if let Err(e) = fs::remove_file(&path).await {
+                    tracing::warn!("Failed to clean up temp file {}: {}", path.display(), e);
+                }
+            });
+        }
+    }
 }
 
 async fn upload_files(
@@ -111,6 +142,8 @@ async fn upload_files(
         let file_name = gen_filename(ext);
         let tmp_path = Path::new(TEMP_DIR).join(&file_name);
         let mut tmp_file = File::create(&tmp_path).await?;
+
+        let tmp_file_guard = TempFileGuard(tmp_path.clone());
 
         while let Some(chunk) = field
             .chunk()
@@ -140,15 +173,15 @@ async fn upload_files(
             .send()
             .await;
 
-        let _ = fs::remove_file(tmp_path).await;
+        drop(tmp_file_guard);
 
         match s3_result {
             Ok(_) => {
                 tracing::debug!("Ok, uploaded file to S3");
                 return Ok(UploadResult {
-                    url: format!("{}/{}", base_url, file_name),
+                    url: format!("{}/api/view/{}", base_url, file_name),
                     file_name,
-                    is_public: false,
+                    is_public: true,
                     user_id: None,
                     // status: "success".to_string(),
                 });

@@ -82,7 +82,7 @@
 				</div>
 				<div class="flex justify-between border-b border-base-200 pb-2">
 					<span class="opacity-60">文件大小</span>
-					<span class="font-mono">{image.size}</span>
+					<span class="font-mono">{(image.size! / 1024 / 1024).toFixed(2)} MB</span>
 				</div>
 				<div class="flex justify-between border-b border-base-200 pb-2">
 					<span class="opacity-60">分辨率</span>
@@ -93,18 +93,6 @@
 					<span class="badge badge-ghost badge-sm">{image.type}</span>
 				</div>
 			</div>
-
-			{#if image.url !== null}
-				<div class="mt-4 card-actions">
-					<a
-						href={image.url}
-						download={image.name}
-						class="btn w-full transition-all duration-300 btn-outline btn-sm"
-					>
-						下载文件
-					</a>
-				</div>
-			{/if}
 		</div>
 	</div>
 </div>

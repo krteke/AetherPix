@@ -35,6 +35,15 @@
 		uploader.processQueue();
 	}
 
+	function retryFailedItems() {
+		uploader.retryFailedItems();
+	}
+
+	function clearQueue() {
+		hasStarted = false;
+		uploader.clearQueue();
+	}
+
 	function retryUpload(item: UploadItem) {
 		uploader.retry(item);
 	}
@@ -120,6 +129,11 @@
 					<span class="text-sm font-bold text-base-content/50 transition-all duration-300"
 						>文件列表 ({queue.length})</span
 					>
+					{#if !queue.some((i) => i.status === 'uploading')}
+						<button class="btn transition-all duration-300 btn-sm btn-primary" onclick={clearQueue}>
+							清空
+						</button>
+					{/if}
 					{#if !hasStarted || queue.some((i) => i.status === 'pending')}
 						<button
 							class="btn animate-pulse transition-all duration-300 btn-sm btn-primary"
@@ -140,7 +154,7 @@
 					{:else if queue.some((i) => i.status === 'error')}
 						<button
 							class="btn transition-all duration-300 btn-sm btn-warning"
-							onclick={startUpload}
+							onclick={retryFailedItems}
 						>
 							重试失败文件
 						</button>

@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
-	import { uploadSession } from '$lib/state/upload.svelte';
+	import { uploadSession, type UploadedFile } from '$lib/state/upload.svelte';
 
 	import ResultCarousel from '$lib/components/ResultCarousel.svelte';
 	import ResultInfo from '$lib/components/ResultInfo.svelte';
@@ -16,15 +16,7 @@
 			goto(resolve('/'));
 		}
 
-		images.forEach((i) => {
-			i.name = i.rawFile.name;
-			i.size = i.rawFile.size;
-			i.type = i.rawFile.type;
-			i.previewUrl = URL.createObjectURL(i.rawFile);
-			const { height, width } = getImageHW(i.rawFile);
-			i.height = height;
-			i.width = width;
-		});
+		processImagesBatch(images);
 
 		return () => {
 			images.forEach((i) => {
@@ -33,25 +25,48 @@
 		};
 	});
 
-	function getImageHW(file: File): { height: number; width: number } {
-		const img = new Image();
-		const url = URL.createObjectURL(file);
+	async function processImage(image: UploadedFile) {
+		image.name = image.rawFile.name;
+		image.size = image.rawFile.size;
+		image.type = image.rawFile.type;
+		image.previewUrl = URL.createObjectURL(image.rawFile);
 
-		img.onload = () => {
-			const height = img.height;
-			const width = img.width;
-			URL.revokeObjectURL(url);
-			return { height, width };
-		};
-
-		img.onerror = () => {
-			URL.revokeObjectURL(url);
-			return { height: 0, width: 0 };
-		};
-
-		img.src = url;
-		return { height: 0, width: 0 };
+		try {
+			const img = await loadImage(image.rawFile);
+			image.height = img.height;
+			image.width = img.width;
+		} catch (error) {
+			console.error(error);
+			image.height = 0;
+			image.width = 0;
+		}
 	}
+
+	async function processImagesBatch(images: UploadedFile[], batchSize = 3) {
+		for (let i = 0; i < images.length; i += batchSize) {
+			const batch = images.slice(i, i + batchSize);
+			await Promise.all(batch.map(processImage));
+		}
+	}
+
+	const loadImage = (file: File): Promise<HTMLImageElement> => {
+		return new Promise((resolve, reject) => {
+			const img = new Image();
+			const url = URL.createObjectURL(file);
+
+			img.onload = () => {
+				resolve(img);
+				URL.revokeObjectURL(url);
+			};
+
+			img.onerror = () => {
+				URL.revokeObjectURL(url);
+				reject(new Error(`Failed to load image: ${file.name}`));
+			};
+
+			img.src = url;
+		});
+	};
 </script>
 
 {#if images.length > 0}

@@ -44,6 +44,10 @@ class UploadManager {
 		return '';
 	});
 
+	clearQueue() {
+		this.queue = [];
+	}
+
 	// 添加文件到队列
 	addFiles(files: FileList) {
 		const newItems: UploadItem[] = Array.from(files).map((file) => ({
@@ -156,7 +160,9 @@ class UploadManager {
 		};
 
 		// 发送请求
-		xhr.open('POST', `${this.uploadUrl()}?public=${item.isPublic}`, true);
+		let url = this.uploadUrl();
+		if (url !== '/api/upload') url = `${this.uploadUrl()}?public=${item.isPublic}`;
+		xhr.open('POST', url, true);
 
 		const formData = new FormData();
 		formData.append('file', item.file);
