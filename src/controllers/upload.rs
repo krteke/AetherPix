@@ -1,9 +1,11 @@
 use aws_sdk_s3::primitives::ByteStream;
 use axum::Extension;
+use image::ImageReader;
 use loco_rs::prelude::*;
 use mime_guess2::mime;
 use serde::Deserialize;
 use std::fmt::Write;
+use std::io::Cursor;
 use std::path::PathBuf;
 use std::{path::Path, sync::Arc};
 use tokio::fs::{self, File};
@@ -27,6 +29,9 @@ pub struct UploadResult {
     pub file_name: String,
     pub is_public: bool,
     pub user_id: Option<Uuid>,
+    pub uuid: Uuid,
+    pub raw_name: String,
+    pub size: String,
     // pub status: String,
 }
 
@@ -123,12 +128,22 @@ async fn upload_files(
         .await
         .map_err(|e| Error::BadRequest(e.to_string()))?
     {
+        let raw_name = field
+            .file_name()
+            .and_then(|p| Path::new(p).file_name().and_then(|e| e.to_str()))
+            .unwrap_or("")
+            .to_string();
         let ext = field
             .file_name()
             .and_then(|p| Path::new(p).extension().and_then(|e| e.to_str()))
             .unwrap_or("");
 
-        let file_name = gen_filename(ext);
+        let uuid = Uuid::now_v7();
+        let mut file_name = String::with_capacity(37 + ext.len());
+        let mut preview_name = String::with_capacity(41);
+        let _ = write!(file_name, "{}.{}", uuid, ext);
+        let _ = write!(preview_name, "{}.webp", uuid);
+
         let tmp_path = Path::new(TEMP_DIR).join(&file_name);
         let mut tmp_file = File::create(&tmp_path).await?;
 
@@ -143,20 +158,58 @@ async fn upload_files(
         }
         tmp_file.flush().await?;
 
-        let body = ByteStream::from_path(&tmp_path)
-            .await
-            .map_err(|_| Error::InternalServerError)?;
+        let size = format!(
+            "{:.2} MB",
+            tmp_path.metadata()?.len() as f32 / 1024.0 / 1024.0
+        );
 
         let mime = mime_guess2::from_path(&tmp_path).first_or_octet_stream();
         if mime.type_() != mime::IMAGE {
             return Err(Error::BadRequest("Invalid file type".to_string()));
         }
 
-        let s3_result = client.pub_object(&file_name, body, mime.as_ref()).await;
+        let upload_original_task = async {
+            let body = ByteStream::from_path(&tmp_path)
+                .await
+                .map_err(|e| e.to_string())?;
+
+            client
+                .pub_object(
+                    &file_name,
+                    body,
+                    mime.as_ref(),
+                    crate::common::client::Position::Original,
+                )
+                .await
+                .map_err(|e| e.to_string())
+        };
+
+        let tmp_path_clone = tmp_path.clone();
+        let client = client.clone();
+        let upload_preview_task = async move {
+            let thumbnail_data =
+                tokio::task::spawn_blocking(move || process_thumbnail(tmp_path_clone))
+                    .await
+                    .map_err(|e| e.to_string())?
+                    .map_err(|e| e.to_string())?;
+            let body = ByteStream::from(thumbnail_data);
+
+            client
+                .pub_object(
+                    &preview_name,
+                    body,
+                    "image/webp",
+                    crate::common::client::Position::Preview,
+                )
+                .await
+                .map_err(|e| e.to_string())
+        };
+
+        let result = tokio::try_join!(upload_original_task, upload_preview_task);
 
         drop(tmp_file_guard);
 
-        match s3_result {
+        match result {
             Ok(_) => {
                 tracing::debug!("Ok, uploaded file to S3");
                 return Ok(UploadResult {
@@ -164,7 +217,9 @@ async fn upload_files(
                     file_name,
                     is_public: true,
                     user_id: None,
-                    // status: "success".to_string(),
+                    uuid,
+                    raw_name,
+                    size,
                 });
             }
             Err(e) => {
@@ -177,19 +232,28 @@ async fn upload_files(
     Err(Error::BadRequest("No file".to_string()))
 }
 
-/// generate filename
-fn gen_filename(ext: &str) -> String {
-    let uuid = Uuid::now_v7();
-    let mut s = String::with_capacity(37 + ext.len());
-    let _ = write!(s, "{}.{}", uuid, ext);
-
-    s
-}
-
 pub fn routes() -> Routes {
     Routes::new()
         .prefix("/api")
         .add("/upload", post(upload))
         .add("/upload/jwt", post(upload_with_jwt))
         .add("/upload/token", post(upload_with_token))
+}
+
+fn process_thumbnail(file_path: PathBuf) -> Result<Vec<u8>, String> {
+    let img = ImageReader::open(file_path)
+        .map_err(|e| e.to_string())?
+        .with_guessed_format()
+        .map_err(|e| e.to_string())?
+        .decode()
+        .map_err(|e| e.to_string())?;
+
+    let thumbnail = img.resize(400, 400, image::imageops::FilterType::Triangle);
+
+    let mut buffer = Cursor::new(Vec::new());
+    thumbnail
+        .write_to(&mut buffer, image::ImageFormat::WebP)
+        .map_err(|e| e.to_string())?;
+
+    Ok(buffer.into_inner())
 }

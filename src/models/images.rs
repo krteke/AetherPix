@@ -2,7 +2,7 @@ use crate::{controllers::upload::UploadResult, models::_entities::images};
 
 pub use super::_entities::images::{ActiveModel, Entity, Model};
 use loco_rs::{model::ModelResult, prelude::*};
-use sea_orm::{TransactionTrait, entity::prelude::*};
+use sea_orm::{ItemsAndPagesNumber, QueryOrder, TransactionTrait, entity::prelude::*};
 pub type Images = Entity;
 
 #[async_trait::async_trait]
@@ -23,17 +23,46 @@ impl ActiveModelBehavior for ActiveModel {
 
 // implement your read-oriented logic here
 impl Model {
-    pub async fn find_by_user_pid(db: &DatabaseConnection, pid: Uuid) -> ModelResult<Vec<Self>> {
-        let images = images::Entity::find()
+    pub async fn find_by_user_pid(
+        db: &DatabaseConnection,
+        pid: Uuid,
+        page: u64,
+        page_size: u64,
+    ) -> ModelResult<(Vec<Self>, ItemsAndPagesNumber)> {
+        let query = images::Entity::find()
             .filter(
                 model::query::condition()
+                    .eq(images::Column::UserPid, Some(pid))
+                    .build(),
+            )
+            .order_by_desc(images::Column::Id)
+            .paginate(db, page_size);
+        let num_items_and_pages = query.num_items_and_pages().await?;
+        let page = page.min(num_items_and_pages.number_of_pages);
+
+        let images = query.fetch_page(page).await?;
+
+        Ok((images, num_items_and_pages))
+    }
+
+    pub async fn find_by_uuid_and_pid(
+        db: &DatabaseConnection,
+        pid: Uuid,
+        uuid: &str,
+    ) -> ModelResult<Model> {
+        let parse_uuid = Uuid::parse_str(uuid).map_err(|e| ModelError::Any(e.into()))?;
+
+        let image = images::Entity::find()
+            .filter(
+                model::query::condition()
+                    .eq(images::Column::Uuid, parse_uuid)
                     .eq(images::Column::UserPid, pid)
                     .build(),
             )
-            .all(db)
+            .one(db)
             .await?;
 
-        Ok(images)
+        image.ok_or_else(|| ModelError::EntityNotFound)
     }
 
     pub async fn find_by_filename(db: &DatabaseConnection, filename: &str) -> ModelResult<Self> {
@@ -74,6 +103,9 @@ impl Model {
             public: Set(upload_result.is_public),
             user_pid: Set(upload_result.user_id),
             url: Set(upload_result.url.clone()),
+            uuid: Set(upload_result.uuid),
+            raw_name: Set(upload_result.raw_name.clone()),
+            size: Set(upload_result.size.clone()),
             ..Default::default()
         }
         .insert(&txn)

@@ -12,10 +12,14 @@
 
 	const logout = () => {
 		auth.logout();
+		goto(resolve('/'));
 	};
 
 	onMount(() => {
 		Promise.all([auth.init(), settingsStore.init()]);
+		if (settingsStore.exists && auth.exists) {
+			if (!settingsStore.allowEveryoneUpload && !auth.isLoggedIn) goto(resolve('/login'));
+		}
 	});
 
 	$effect(() => {

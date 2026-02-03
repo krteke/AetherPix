@@ -32,6 +32,7 @@ mod keys {
     pub const AWS_ENDPOINT_URL: &str = "aws_endpoint_url";
 
     pub const BUCKET_NAME: &str = "bucket_name";
+    pub const PREVIEW_BUCKET_NAME: &str = "preview_bucket_name";
 
     pub const DEFAULT_REGION: &str = "garage";
 }
@@ -82,6 +83,10 @@ impl SettingsService {
 
     pub async fn bucket_name() -> String {
         Self::get(keys::BUCKET_NAME, "").await
+    }
+
+    pub async fn preview_bucket_name() -> String {
+        Self::get(keys::PREVIEW_BUCKET_NAME, "").await
     }
 
     pub async fn get_app_settings() -> AppSettings {

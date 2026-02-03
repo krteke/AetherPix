@@ -92,7 +92,12 @@ impl Hooks for App {
             .expect("加载系统配置失败");
 
         let bucket_name = SettingsService::bucket_name().await;
-        let s3_client = Arc::new(S3Client::new(init_s3_client().await, bucket_name));
+        let preview_bucket_name = SettingsService::preview_bucket_name().await;
+        let s3_client = Arc::new(S3Client::new(
+            init_s3_client().await,
+            bucket_name,
+            preview_bucket_name,
+        ));
 
         Ok(router.layer(Extension(s3_client)))
     }

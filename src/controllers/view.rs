@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use axum::{
     Extension,
     body::Body,
@@ -10,14 +8,22 @@ use axum::{
 };
 use loco_rs::prelude::*;
 use serde::Deserialize;
+use std::fmt::Write;
+use std::sync::Arc;
 use tokio_util::io::ReaderStream;
 
-use crate::{common::client::S3Client, models::_entities::images};
+use crate::{
+    common::client::{Position, S3Client},
+    models::{_entities::images, users::users},
+    views::view::{Image, ListViewResponse},
+};
+
+const MAX_PAGE_SIZE: u64 = 20;
 
 #[derive(Deserialize)]
 pub struct ListViewParams {
-    pub page: u32,
-    pub limit: u32,
+    pub page: u64,
+    pub limit: u64,
 }
 
 async fn view(
@@ -28,9 +34,74 @@ async fn view(
 ) -> Result<Response> {
     images::Model::find_by_filename(&ctx.db, &name).await?;
 
+    fetch_file(headers, &s3_client, &name, Position::Original).await
+}
+
+async fn preview(
+    auth: auth::JWT,
+    State(ctx): State<AppContext>,
+    Extension(s3_client): Extension<Arc<S3Client>>,
+    headers: HeaderMap,
+    Path(name): Path<String>,
+) -> Result<Response> {
+    let user_pid = auth.claims.pid;
+    let user = users::Model::find_by_pid(&ctx.db, &user_pid).await?;
+
+    let uuid = &name[0..name.len() - 5];
+
+    if let Err(e) = images::Model::find_by_uuid_and_pid(&ctx.db, user.pid, uuid).await {
+        tracing::error!("Failed to find image by UUID and PID: {}", e);
+        return Err(Error::NotFound);
+    }
+
+    fetch_file(headers, &s3_client, &name, Position::Preview).await
+}
+
+async fn list(
+    auth: auth::JWT,
+    State(ctx): State<AppContext>,
+    Query(params): Query<ListViewParams>,
+) -> Result<Response> {
+    let user_pid = auth.claims.pid;
+    let user = users::Model::find_by_pid(&ctx.db, &user_pid).await?;
+
+    let page_size = params.limit.min(MAX_PAGE_SIZE);
+    let (images, num_items_and_pages) =
+        images::Model::find_by_user_pid(&ctx.db, user.pid, params.page, page_size).await?;
+
+    let base_url = ctx.config.server.full_url() + "/api/view/preview/";
+    let images: Vec<Image> = images
+        .into_iter()
+        .map(|m| {
+            let mut url = String::with_capacity(base_url.len() + 41);
+            let _ = write!(url, "{}{}.webp", base_url, m.uuid);
+
+            Image {
+                preview_url: url,
+                original_url: m.url,
+                name: m.raw_name,
+                size: m.size,
+                id: m.id,
+            }
+        })
+        .collect();
+
+    format::json(ListViewResponse {
+        images,
+        pages: num_items_and_pages.number_of_pages,
+        total: num_items_and_pages.number_of_items,
+    })
+}
+
+async fn fetch_file(
+    headers: HeaderMap,
+    s3_client: &S3Client,
+    name: &str,
+    position: Position,
+) -> Result<Response> {
     let if_none_match = headers.get(IF_NONE_MATCH).and_then(|h| h.to_str().ok());
 
-    let s3_req = s3_client.get_object(&name).await;
+    let s3_req = s3_client.get_object(name, position).await;
     let output = match s3_req {
         Ok(o) => o,
         Err(e) => {
@@ -70,17 +141,10 @@ async fn view(
     Ok(response)
 }
 
-async fn view_list(
-    auth: auth::JWT,
-    State(ctx): State<AppContext>,
-    Json(params): Json<ListViewParams>,
-) -> Result<Response> {
-    todo!()
-}
-
 pub fn routes() -> Routes {
     Routes::new()
         .prefix("/api/view")
         .add("/{name}", get(view))
-        .add("/list", get(view_list))
+        .add("/preview/{name}", get(preview))
+        .add("/list", get(list))
 }

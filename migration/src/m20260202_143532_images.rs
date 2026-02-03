@@ -16,6 +16,9 @@ impl MigrationTrait for Migration {
                 ("user_pid", ColType::UuidNull),
                 ("public", ColType::Boolean),
                 ("file_name", ColType::Text),
+                ("uuid", ColType::Uuid),
+                ("raw_name", ColType::Text),
+                ("size", ColType::String),
             ],
             &[],
         )
