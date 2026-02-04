@@ -1,6 +1,9 @@
+use std::sync::{Arc, OnceLock};
+
+use aws_config::{Region, SdkConfig};
 use aws_sdk_s3::{
     Client,
-    config::http::HttpResponse,
+    config::{Credentials, SharedCredentialsProvider, http::HttpResponse},
     error::SdkError,
     operation::{
         get_object::{GetObjectError, GetObjectOutput},
@@ -8,7 +11,37 @@ use aws_sdk_s3::{
     },
     primitives::ByteStream,
 };
+use loco_rs::app::AppContext;
 
+use crate::common::settings::SettingsService;
+
+static S3_GARAGE: OnceLock<Arc<S3Client>> = OnceLock::new();
+
+pub async fn init_garage(ctx: &AppContext) {
+    if S3_GARAGE.get().is_some() {
+        return;
+    }
+
+    SettingsService::load(&ctx.db)
+        .await
+        .expect("加载系统配置失败");
+
+    let bucket_name = SettingsService::bucket_name().await;
+    let preview_bucket_name = SettingsService::preview_bucket_name().await;
+    let s3_client = Arc::new(S3Client::new(
+        init_s3_client().await,
+        bucket_name,
+        preview_bucket_name,
+    ));
+
+    S3_GARAGE.set(s3_client).expect("初始化S3客户端失败");
+}
+
+pub fn get_garage() -> &'static Arc<S3Client> {
+    S3_GARAGE.get().expect("S3客户端未初始化")
+}
+
+#[derive(Debug)]
 pub struct S3Client {
     client: Client,
     bucket: String,
@@ -65,4 +98,25 @@ impl S3Client {
             .send()
             .await
     }
+}
+
+async fn init_s3_client() -> Client {
+    let region = SettingsService::aws_region().await;
+    let endpoint_url = SettingsService::aws_endpoint_url().await;
+    let access_key_id = SettingsService::aws_access_key_id().await;
+    let secret_access_key = SettingsService::aws_secret_access_key().await;
+
+    let credentials = Credentials::builder()
+        .access_key_id(access_key_id)
+        .secret_access_key(secret_access_key)
+        .provider_name("static")
+        .build();
+
+    let config = SdkConfig::builder()
+        .region(Region::new(region))
+        .endpoint_url(endpoint_url)
+        .credentials_provider(SharedCredentialsProvider::new(credentials))
+        .build();
+
+    aws_sdk_s3::Client::new(&config)
 }

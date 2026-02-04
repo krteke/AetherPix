@@ -1,9 +1,4 @@
 use async_trait::async_trait;
-use aws_config::{Region, SdkConfig};
-use aws_sdk_s3::{
-    Client,
-    config::{Credentials, SharedCredentialsProvider},
-};
 use axum::{Extension, Router};
 use loco_rs::{
     Result,
@@ -17,10 +12,10 @@ use loco_rs::{
     task::Tasks,
 };
 use migration::Migrator;
-use std::{path::Path, sync::Arc};
+use std::path::Path;
 
 use crate::{
-    common::{client::S3Client, settings::SettingsService},
+    common::client::{get_garage, init_garage},
     models::_entities::settings,
 };
 #[allow(unused_imports)]
@@ -51,7 +46,9 @@ impl Hooks for App {
         create_app::<Self, Migrator>(mode, environment, config).await
     }
 
-    async fn initializers(_ctx: &AppContext) -> Result<Vec<Box<dyn Initializer>>> {
+    async fn initializers(ctx: &AppContext) -> Result<Vec<Box<dyn Initializer>>> {
+        init_garage(ctx).await;
+
         Ok(vec![])
     }
 
@@ -63,6 +60,9 @@ impl Hooks for App {
             .add_route(controllers::view::routes())
     }
     async fn connect_workers(ctx: &AppContext, queue: &Queue) -> Result<()> {
+        queue
+            .register(crate::workers::thumbnail::Worker::build(ctx))
+            .await?;
         queue.register(DownloadWorker::build(ctx)).await?;
         Ok(())
     }
@@ -86,40 +86,9 @@ impl Hooks for App {
         .await?;
         Ok(())
     }
-    async fn after_routes(router: Router, ctx: &AppContext) -> Result<Router> {
-        SettingsService::load(&ctx.db)
-            .await
-            .expect("加载系统配置失败");
-
-        let bucket_name = SettingsService::bucket_name().await;
-        let preview_bucket_name = SettingsService::preview_bucket_name().await;
-        let s3_client = Arc::new(S3Client::new(
-            init_s3_client().await,
-            bucket_name,
-            preview_bucket_name,
-        ));
+    async fn after_routes(router: Router, _ctx: &AppContext) -> Result<Router> {
+        let s3_client = get_garage().clone();
 
         Ok(router.layer(Extension(s3_client)))
     }
-}
-
-async fn init_s3_client() -> Client {
-    let region = SettingsService::aws_region().await;
-    let endpoint_url = SettingsService::aws_endpoint_url().await;
-    let access_key_id = SettingsService::aws_access_key_id().await;
-    let secret_access_key = SettingsService::aws_secret_access_key().await;
-
-    let credentials = Credentials::builder()
-        .access_key_id(access_key_id)
-        .secret_access_key(secret_access_key)
-        .provider_name("static")
-        .build();
-
-    let config = SdkConfig::builder()
-        .region(Region::new(region))
-        .endpoint_url(endpoint_url)
-        .credentials_provider(SharedCredentialsProvider::new(credentials))
-        .build();
-
-    aws_sdk_s3::Client::new(&config)
 }

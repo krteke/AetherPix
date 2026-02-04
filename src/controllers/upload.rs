@@ -1,11 +1,9 @@
 use aws_sdk_s3::primitives::ByteStream;
 use axum::Extension;
-use image::ImageReader;
 use loco_rs::prelude::*;
 use mime_guess2::mime;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use std::fmt::Write;
-use std::io::Cursor;
 use std::path::PathBuf;
 use std::{path::Path, sync::Arc};
 use tokio::fs::{self, File};
@@ -16,6 +14,7 @@ use crate::common::settings::SettingsService;
 use crate::models::images;
 use crate::models::users::users;
 use crate::views::upload::UploadResponse;
+use crate::workers::thumbnail::{Worker, WorkerArgs};
 
 const TEMP_DIR: &str = "tmp_upload";
 
@@ -46,7 +45,7 @@ async fn upload(
     }
     let base_url = ctx.config.server.full_url();
 
-    match upload_files(multipart, s3_client.clone(), &base_url).await {
+    match upload_files(multipart, s3_client.clone(), &ctx, &base_url).await {
         Ok(r) => {
             images::Model::create_with_upload_result(&ctx.db, &r).await?;
             format::json(UploadResponse::from(r))
@@ -69,7 +68,7 @@ async fn upload_with_jwt(
     let user = users::Model::find_by_pid(&ctx.db, &jwt.claims.pid).await?;
     let base_url = ctx.config.server.full_url();
 
-    match upload_files(multipart, s3_client.clone(), &base_url).await {
+    match upload_files(multipart, s3_client.clone(), &ctx, &base_url).await {
         Ok(mut r) => {
             r.is_public = upload_params.public;
             r.user_id = Some(user.pid);
@@ -101,7 +100,8 @@ async fn upload_with_token(
     format::json(())
 }
 
-struct TempFileGuard(PathBuf);
+#[derive(Debug, Serialize, Deserialize)]
+pub struct TempFileGuard(pub PathBuf);
 
 impl Drop for TempFileGuard {
     fn drop(&mut self) {
@@ -119,6 +119,7 @@ impl Drop for TempFileGuard {
 async fn upload_files(
     mut multipart: Multipart,
     client: Arc<S3Client>,
+    ctx: &AppContext,
     base_url: &str,
 ) -> Result<UploadResult> {
     tokio::fs::create_dir_all(TEMP_DIR).await?;
@@ -168,46 +169,28 @@ async fn upload_files(
             return Err(Error::BadRequest("Invalid file type".to_string()));
         }
 
-        let upload_original_task = async {
-            let body = ByteStream::from_path(&tmp_path)
-                .await
-                .map_err(|e| e.to_string())?;
+        let body = ByteStream::from_path(&tmp_path).await.map_err(|e| {
+            tracing::error!("Failed to read file: {}", e);
+            Error::InternalServerError
+        })?;
 
-            client
-                .pub_object(
-                    &file_name,
-                    body,
-                    mime.as_ref(),
-                    crate::common::client::Position::Original,
-                )
-                .await
-                .map_err(|e| e.to_string())
+        let result = client
+            .pub_object(
+                &file_name,
+                body,
+                mime.as_ref(),
+                crate::common::client::Position::Original,
+            )
+            .await;
+
+        let args = WorkerArgs {
+            preview_key: preview_name,
+            tmp_file_guard,
         };
 
-        let tmp_path_clone = tmp_path.clone();
-        let client = client.clone();
-        let upload_preview_task = async move {
-            let thumbnail_data =
-                tokio::task::spawn_blocking(move || process_thumbnail(tmp_path_clone))
-                    .await
-                    .map_err(|e| e.to_string())?
-                    .map_err(|e| e.to_string())?;
-            let body = ByteStream::from(thumbnail_data);
-
-            client
-                .pub_object(
-                    &preview_name,
-                    body,
-                    "image/webp",
-                    crate::common::client::Position::Preview,
-                )
-                .await
-                .map_err(|e| e.to_string())
-        };
-
-        let result = tokio::try_join!(upload_original_task, upload_preview_task);
-
-        drop(tmp_file_guard);
+        if let Err(e) = Worker::perform_later(ctx, args).await {
+            tracing::error!("Failed to enqueue worker task: {}", e);
+        }
 
         match result {
             Ok(_) => {
@@ -238,22 +221,4 @@ pub fn routes() -> Routes {
         .add("/upload", post(upload))
         .add("/upload/jwt", post(upload_with_jwt))
         .add("/upload/token", post(upload_with_token))
-}
-
-fn process_thumbnail(file_path: PathBuf) -> Result<Vec<u8>, String> {
-    let img = ImageReader::open(file_path)
-        .map_err(|e| e.to_string())?
-        .with_guessed_format()
-        .map_err(|e| e.to_string())?
-        .decode()
-        .map_err(|e| e.to_string())?;
-
-    let thumbnail = img.resize(400, 400, image::imageops::FilterType::Triangle);
-
-    let mut buffer = Cursor::new(Vec::new());
-    thumbnail
-        .write_to(&mut buffer, image::ImageFormat::WebP)
-        .map_err(|e| e.to_string())?;
-
-    Ok(buffer.into_inner())
 }
