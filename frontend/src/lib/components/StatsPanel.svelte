@@ -1,10 +1,6 @@
-<script lang="ts">
-	import { userState } from '$lib/state/user.svelte';
-
-	// 计算存储百分比
+<!-- <script lang="ts">
 	let usagePercent = $derived((userState.stats.storageUsed / userState.stats.storageLimit) * 100);
 
-	// 进度条颜色逻辑
 	let progressColor = $derived(
 		usagePercent > 90
 			? 'progress-error'
@@ -15,7 +11,6 @@
 </script>
 
 <div class="flex flex-col gap-6">
-	<!-- 顶部概览卡片 -->
 	<div class="grid grid-cols-1 gap-4 md:grid-cols-3">
 		<div class="stats border border-base-200 shadow transition-all duration-300">
 			<div class="stat">
@@ -82,7 +77,6 @@
 		</div>
 	</div>
 
-	<!-- 最近上传列表 -->
 	<div class="card border border-base-200 bg-base-100 shadow transition-all duration-300">
 		<div class="card-body transition-all duration-300">
 			<h3 class="mb-2 card-title text-base">最近上传记录</h3>
@@ -124,4 +118,4 @@
 			</div>
 		</div>
 	</div>
-</div>
+</div> -->

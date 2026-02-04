@@ -1,4 +1,4 @@
-<script lang="ts">
+<!-- <script lang="ts">
 	import { userState } from '$lib/state/user.svelte';
 </script>
 
@@ -7,7 +7,6 @@
 		<h2 class="mb-6 card-title text-xl">通用偏好</h2>
 
 		<div class="flex flex-col gap-6">
-			<!-- 默认链接格式 -->
 			<div class="form-control">
 				<label class="label cursor-pointer justify-start gap-4">
 					<span class="label-text w-32 font-bold">默认链接格式</span>
@@ -26,7 +25,6 @@
 
 			<div class="divider my-0"></div>
 
-			<!-- 开关选项 -->
 			<div class="form-control w-full">
 				<label class="label cursor-pointer">
 					<span class="label-text">
@@ -45,7 +43,6 @@
 				<label class="label cursor-pointer">
 					<span class="label-text">
 						<div class="font-bold">默认私有上传</div>
-						<div class="text-xs opacity-60">上传的图片默认不出现在公开广场</div>
 					</span>
 					<input
 						type="checkbox"
@@ -56,4 +53,4 @@
 			</div>
 		</div>
 	</div>
-</div>
+</div> -->

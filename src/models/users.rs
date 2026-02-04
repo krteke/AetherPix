@@ -335,4 +335,10 @@ impl ActiveModel {
         self.reset_sent_at = ActiveValue::Set(None);
         self.update(db).await.map_err(ModelError::from)
     }
+
+    pub async fn reset_api_key(mut self, db: &DatabaseConnection) -> ModelResult<Model> {
+        self.api_key = ActiveValue::Set(format!("ap-{}", Uuid::new_v4()));
+
+        self.update(db).await.map_err(ModelError::from)
+    }
 }

@@ -7,8 +7,8 @@ use crate::{
     },
     views::auth::{ApiKeyResponse, CurrentResponse, LoginResponse},
 };
-use ::cookie::{time::Duration, Cookie};
-use axum::http::{header::SET_COOKIE, HeaderValue};
+use ::cookie::{Cookie, time::Duration};
+use axum::http::{HeaderValue, header::SET_COOKIE};
 use chrono::Local;
 use loco_rs::{config::JWT, prelude::*};
 use serde::{Deserialize, Serialize};
@@ -27,6 +27,14 @@ pub struct ResetParams {
 #[derive(Debug, Deserialize, Serialize)]
 pub struct ResendVerificationParams {
     pub email: String,
+}
+
+#[derive(Debug, Deserialize, Serialize, Validate)]
+#[serde(rename_all = "camelCase")]
+pub struct ResetPasswordParams {
+    pub password: String,
+    #[validate(length(min = 8, max = 128, message = "密码长度必须在8到128之间"))]
+    pub new_password: String,
 }
 
 const VERIFY_TOKEN_EXP_HOURS: i64 = 24;
@@ -157,6 +165,54 @@ async fn reset(
     Ok(())
 }
 
+async fn reset_api_key(auth: auth::JWT, State(ctx): State<AppContext>) -> Result<Response> {
+    let user = users::Model::find_by_pid(&ctx.db, &auth.claims.pid)
+        .await
+        .inspect_err(|e| {
+            tracing::error!("Failed to find user by PID: {}", e);
+        })?;
+
+    let user_id = user.id;
+    let user = user
+        .into_active_model()
+        .reset_api_key(&ctx.db)
+        .await
+        .inspect_err(|e| {
+            tracing::error!("Failed to reset API key for user {}: {}", user_id, e);
+        })?;
+
+    tracing::info!("api key reset for user {}", user.id);
+
+    format::json(ApiKeyResponse { key: user.api_key })
+}
+
+async fn reset_password(
+    auth: auth::JWT,
+    State(ctx): State<AppContext>,
+    Json(params): Json<ResetPasswordParams>,
+) -> AppResult<impl IntoResponse> {
+    if let Err(e) = validator::Validate::validate(&params) {
+        tracing::info!("参数校验失败: {}", e);
+
+        return Err(AppError::Validation(e.to_string()));
+    }
+
+    let user = users::Model::find_by_pid(&ctx.db, &auth.claims.pid)
+        .await
+        .inspect_err(|e| {
+            tracing::error!("Failed to find user by PID: {}", e);
+        })?;
+    if !user.verify_password(&params.password) {
+        return Err(AppError::WrongCredentials);
+    }
+
+    user.into_active_model()
+        .reset_password(&ctx.db, &params.new_password)
+        .await?;
+
+    Ok(())
+}
+
 /// Creates a user login and returns a token
 #[debug_handler]
 async fn login(
@@ -235,16 +291,6 @@ async fn resend_verification_email(
     format::json(())
 }
 
-pub async fn get_api_key(auth: auth::JWT, State(ctx): State<AppContext>) -> Result<Response> {
-    let user_pid = auth.claims.pid;
-
-    let user = users::Model::find_by_pid(&ctx.db, &user_pid)
-        .await
-        .map_err(|_| Error::Unauthorized("User not found".to_string()))?;
-
-    format::json(ApiKeyResponse { key: user.api_key })
-}
-
 pub fn routes() -> Routes {
     Routes::new()
         .prefix("/api/auth")
@@ -253,10 +299,11 @@ pub fn routes() -> Routes {
         .add("/login", post(login))
         .add("/forgot", post(forgot))
         .add("/reset", post(reset))
+        .add("/reset/api-key", post(reset_api_key))
+        .add("/reset/password", post(reset_password))
         .add("/current", get(current))
         .add("/logout", post(logout))
         .add("/resend-verification-mail", post(resend_verification_email))
-        .add("/api-key", get(get_api_key))
 }
 
 fn insert_jwt_into_cookie(jwt: &JWT, user: &Model) -> Result<Response> {

@@ -31,3 +31,13 @@ export type Image = {
 	name: string;
 	size: string;
 };
+
+export type UserProfileResponse = {
+	name: string;
+	email: string;
+	apiToken: string;
+};
+
+export type ApiKeyResponse = {
+	key: string;
+};

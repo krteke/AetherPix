@@ -2,19 +2,50 @@
 	import Sidebar from '$lib/components/Sidebar.svelte';
 	import ProfilePanel from '$lib/components/ProfilePanel.svelte';
 	import SecurityPanel from '$lib/components/SecurityPanel.svelte';
-	import StatsPanel from '$lib/components/StatsPanel.svelte';
-	import PreferencesPanel from '$lib/components/PreferencesPanel.svelte';
+	import type { UserProfileResponse } from '$lib/types/type';
+	import { onMount } from 'svelte';
+	// import StatsPanel from '$lib/components/StatsPanel.svelte';
 
-	// 当前激活的 Tab 状态
 	let activeTab = $state('profile');
 
-	// 动态组件映射
 	const panels: Record<string, any> = {
 		profile: ProfilePanel,
-		security: SecurityPanel,
-		stats: StatsPanel,
-		prefs: PreferencesPanel
+		security: SecurityPanel
+		// stats: StatsPanel
+		// prefs: PreferencesPanel
 	};
+	const PanelComponent = $derived(panels[activeTab]);
+
+	let username = $state('');
+	let email = $state('');
+	let apiToken = $state('************');
+	const fetchUser = async () => {
+		console.log('fetchUser called');
+		try {
+			console.log('Attempting to fetch...');
+			const response = await fetch('/api/profile/user', {
+				method: 'GET'
+			});
+
+			console.log(response);
+			if (!response.ok) {
+				console.error('Fetch failed:', response.statusText);
+				return;
+			}
+			console.log('Data received');
+
+			const data: UserProfileResponse = await response.json();
+			username = data.name;
+			email = data.email;
+			apiToken = data.apiToken;
+		} catch (error) {
+			console.error(error);
+		}
+	};
+
+	onMount(() => {
+		fetchUser();
+	});
 </script>
 
 <div class="container mx-auto max-w-6xl px-4 py-8">
@@ -26,18 +57,13 @@
 	</div>
 
 	<div class="flex flex-col items-start gap-8 md:flex-row">
-		<!-- 左侧：Sidebar -->
-		<aside class="sticky top-20 w-full flex-shrink-0 md:w-64">
-			<!-- 使用 bind:activeTab 实现双向绑定 -->
+		<aside class="sticky top-20 w-full shrink-0 md:w-64">
 			<Sidebar bind:activeTab />
 		</aside>
 
-		<!-- 右侧：内容区 -->
 		<main class="w-full min-w-0 flex-1">
-			<!-- 简单的淡入动画容器 -->
 			<div class="animate-fade-in">
-				<!-- Svelte 动态组件 -->
-				<svelte:component this={panels[activeTab]} class=" transition-all duration-300" />
+				<PanelComponent name={username} {email} {apiToken} class="transition-all duration-300" />
 			</div>
 		</main>
 	</div>

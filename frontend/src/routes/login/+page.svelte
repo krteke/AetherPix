@@ -142,7 +142,7 @@
 			<form onsubmit={handleSubmit} class="flex flex-col gap-4">
 				<div>
 					<label class="label" for="username">
-						<span class="label-text">用户名</span>
+						<span>用户名</span>
 					</label>
 					<input
 						bind:value={username}
@@ -158,7 +158,7 @@
 				{#if isRegister}
 					<div>
 						<label class="label" for="email">
-							<span class="label-text">邮箱</span>
+							<span>邮箱</span>
 						</label>
 						<input
 							bind:value={email}
@@ -173,7 +173,7 @@
 				{/if}
 				<div>
 					<label class="label" for="password">
-						<span class="label-text">密码</span>
+						<span>密码</span>
 					</label>
 					<input
 						bind:value={password}
@@ -189,7 +189,7 @@
 				{#if isRegister}
 					<div class="animate-fade-in-down">
 						<label class="label" for="confirm-pass">
-							<span class="label-text">确认密码</span>
+							<span>确认密码</span>
 						</label>
 						<input
 							bind:value={confirmPassword}

@@ -1,7 +1,7 @@
 use axum::{
+    Json,
     http::StatusCode,
     response::{IntoResponse, Response},
-    Json,
 };
 use thiserror::Error;
 
@@ -21,6 +21,8 @@ pub enum AppError {
     InvalidToken,
     #[error("无效的请求")]
     InvalidRequest,
+    #[error("参数校验失败: {0}")]
+    Validation(String),
     #[error(transparent)]
     LocoError(#[from] loco_rs::Error),
     #[error(transparent)]
@@ -45,6 +47,9 @@ impl IntoResponse for AppError {
             ),
             AppError::InvalidToken => (StatusCode::UNAUTHORIZED, "无效的token".to_string()),
             AppError::InvalidRequest => (StatusCode::BAD_REQUEST, "无效的请求".to_string()),
+            AppError::Validation(msg) => {
+                (StatusCode::BAD_REQUEST, format!("参数校验失败: {}", msg))
+            }
             AppError::LocoError(e) => {
                 tracing::error!("{}", e);
                 (
