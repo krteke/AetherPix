@@ -7,11 +7,11 @@
 	import { auth } from '$lib/state/auth.svelte';
 
 	let isDragging = $state(false);
-	let quality = $state(80);
+	let quality = $state(uploader.quality);
 
 	// 设置选项
 	let storageLocation: UploadLocation = $state(uploader.uploadLocation);
-	let isPublic = $state(true);
+	let isPublic = $state(uploader.isPublic);
 
 	// 核心队列
 	let queue = $derived(uploader.queue);
@@ -22,6 +22,7 @@
 		queue.forEach((item) => {
 			item.isPublic = isPublic;
 			item.quality = quality;
+			item.location = storageLocation;
 		});
 	});
 
@@ -282,7 +283,7 @@
 							<input
 								id="quality"
 								type="range"
-								class="range range-primary range-xs"
+								class="range range-primary transition-all duration-300 range-xs"
 								min="1"
 								max="100"
 								bind:value={quality}

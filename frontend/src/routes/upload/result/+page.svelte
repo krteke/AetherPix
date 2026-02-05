@@ -91,7 +91,7 @@
 		<ResultInfo image={images[activeIndex]} />
 
 		<div class="mt-12 flex justify-center">
-			<a href={resolve('/')} class="btn btn-ghost">继续上传</a>
+			<a href={resolve('/')} class="btn btn-ghost transition-all duration-300">继续上传</a>
 		</div>
 	</div>
 {/if}

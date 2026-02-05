@@ -25,6 +25,8 @@
 
 			if (!res.ok) {
 				msg.alert(await res.text(), '修改密码失败', 'error');
+				isLoading = false;
+				return;
 			}
 
 			msg.alert('密码修改成功', '修改密码成功', 'success');

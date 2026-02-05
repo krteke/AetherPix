@@ -43,3 +43,7 @@ export type UserProfileResponse = {
 export type ApiKeyResponse = {
 	key: string;
 };
+
+export type PresignResponse = {
+	uploadUrl: string;
+};

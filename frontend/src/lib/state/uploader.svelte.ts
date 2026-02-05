@@ -1,4 +1,4 @@
-import type { UploadResponse } from '$lib/types/type';
+import type { PresignResponse, UploadResponse } from '$lib/types/type';
 import { auth } from './auth.svelte';
 import { settingsStore } from './settings.svelte';
 import type { UploadedFile } from './upload.svelte';
@@ -13,6 +13,7 @@ export interface UploadItem {
 	status: UploadStatus;
 	isPublic: boolean;
 	quality: number;
+	location: UploadLocation;
 	progress: number; // 0-100
 	speed: string; // e.g., "1.2 MB/s"
 	loaded: number; // 已上传字节数
@@ -32,6 +33,8 @@ class UploadManager {
 	// 最大并发数
 	concurrency = 3;
 	uploadLocation: UploadLocation = $state('local');
+	isPublic = $state(true);
+	quality = $state(80);
 
 	uploadUrl = $derived(() => {
 		if (this.uploadLocation === 'local') {
@@ -54,8 +57,9 @@ class UploadManager {
 		const newItems: UploadItem[] = Array.from(files).map((file) => ({
 			name: file.name,
 			file,
+			location: 'local',
 			isPublic: true,
-			quality: 100,
+			quality: 80,
 			status: 'pending',
 			progress: 0,
 			speed: '0 KB/s',
@@ -97,7 +101,7 @@ class UploadManager {
 	}
 
 	// 单个文件上传逻辑 (使用 XHR)
-	private uploadFile(item: UploadItem) {
+	private async uploadFile(item: UploadItem) {
 		item.status = 'uploading';
 		item._lastTime = Date.now();
 		item._lastLoaded = 0;
@@ -133,7 +137,7 @@ class UploadManager {
 				item.progress = 100;
 				item.speed = '';
 				try {
-					item.response = JSON.parse(xhr.responseText) as UploadResponse;
+					item.response = JSON.parse(xhr.responseText) as unknown as UploadResponse;
 					item.result = {
 						url: item.response.url,
 						rawFile: item.file
@@ -162,15 +166,42 @@ class UploadManager {
 		};
 
 		// 发送请求
-		let url = this.uploadUrl();
-		if (this.uploadLocation === 'local')
+		let url = '';
+		if (item.location === 'local') {
 			url = `${this.uploadUrl()}?public=${item.isPublic}&quality=${item.quality}`;
-		xhr.open('POST', url, true);
+			xhr.open('POST', url, true);
 
-		const formData = new FormData();
-		formData.append('file', item.file);
+			const formData = new FormData();
+			formData.append('file', item.file);
 
-		xhr.send(formData);
+			xhr.send(formData);
+		} else {
+			try {
+				const res = await fetch('/api/presign', {
+					method: 'POST',
+					headers: {
+						'Content-Type': 'application/json'
+					},
+					body: JSON.stringify({
+						filename: item.file.name,
+						contentType: item.file.type,
+						size: item.file.size
+					})
+				});
+				if (!res.ok) {
+					console.error('Presign failed' + (await res.text()));
+					return;
+				}
+				const data: PresignResponse = await res.json();
+				url = data.uploadUrl;
+
+				xhr.open('PUT', url, true);
+				xhr.setRequestHeader('Content-Type', item.file.type);
+				xhr.send(item.file);
+			} catch (e) {
+				console.error(e);
+			}
+		}
 	}
 
 	// 任务完成后的回调

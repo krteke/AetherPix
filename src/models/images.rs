@@ -1,4 +1,7 @@
-use crate::{controllers::upload::UploadResult, models::_entities::images};
+use crate::{
+    controllers::upload::UploadResult,
+    models::_entities::images::{self, Location},
+};
 
 pub use super::_entities::images::{ActiveModel, Entity, Model};
 use loco_rs::{model::ModelResult, prelude::*};
@@ -23,7 +26,7 @@ impl ActiveModelBehavior for ActiveModel {
 
 // implement your read-oriented logic here
 impl Model {
-    pub async fn find_by_user_pid(
+    pub async fn find_by_user_pid_in_local(
         db: &DatabaseConnection,
         pid: Uuid,
         page: u64,
@@ -32,6 +35,7 @@ impl Model {
         let query = images::Entity::find()
             .filter(
                 model::query::condition()
+                    .eq(images::Column::Location, Location::Local)
                     .eq(images::Column::UserPid, Some(pid))
                     .build(),
             )
@@ -45,7 +49,7 @@ impl Model {
         Ok((images, num_items_and_pages))
     }
 
-    pub async fn find_by_uuid_and_pid(
+    pub async fn find_by_uuid_and_pid_in_local(
         db: &DatabaseConnection,
         pid: Uuid,
         uuid: &str,
@@ -55,6 +59,7 @@ impl Model {
         let image = images::Entity::find()
             .filter(
                 model::query::condition()
+                    .eq(images::Column::Location, Location::Local)
                     .eq(images::Column::Uuid, parse_uuid)
                     .eq(images::Column::UserPid, pid)
                     .build(),
@@ -65,10 +70,14 @@ impl Model {
         image.ok_or_else(|| ModelError::EntityNotFound)
     }
 
-    pub async fn find_by_filename(db: &DatabaseConnection, filename: &str) -> ModelResult<Self> {
+    pub async fn find_by_filename_in_local(
+        db: &DatabaseConnection,
+        filename: &str,
+    ) -> ModelResult<Self> {
         let images = images::Entity::find()
             .filter(
                 model::query::condition()
+                    .eq(images::Column::Location, Location::Local)
                     .eq(images::Column::FileName, filename)
                     .eq(images::Column::Public, true)
                     .build(),
@@ -79,7 +88,7 @@ impl Model {
         images.ok_or_else(|| ModelError::EntityNotFound)
     }
 
-    pub async fn create_with_upload_result(
+    pub async fn save_local_with_result(
         db: &DatabaseConnection,
         upload_result: &UploadResult,
     ) -> ModelResult<Self> {
@@ -106,6 +115,7 @@ impl Model {
             uuid: Set(upload_result.uuid),
             raw_name: Set(upload_result.raw_name.clone()),
             size: Set(upload_result.size.clone()),
+            location: Set(images::Location::Local),
             ..Default::default()
         }
         .insert(&txn)

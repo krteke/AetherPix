@@ -21,6 +21,17 @@ pub struct Model {
     pub file_name: String,
     #[sea_orm(unique)]
     pub uuid: Uuid,
+    pub location: Location,
+}
+
+#[derive(Clone, Copy, Debug, EnumIter, PartialEq, Eq, DeriveActiveEnum, Serialize, Deserialize)]
+#[sea_orm(enum_name = "location", rs_type = "String", db_type = "Enum")]
+#[serde(rename_all = "lowercase")]
+pub enum Location {
+    #[sea_orm(string_value = "local")]
+    Local,
+    #[sea_orm(string_value = "r2")]
+    R2,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]

@@ -17,6 +17,8 @@
 
 			if (!response.ok) {
 				msg.alert(await response.text(), '重置失败', 'error');
+				isResetting = false;
+				return;
 			}
 
 			const data: ApiKeyResponse = await response.json();

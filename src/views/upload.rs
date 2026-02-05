@@ -16,3 +16,9 @@ impl From<UploadResult> for UploadResponse {
         }
     }
 }
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PresignResponse {
+    pub upload_url: String,
+}

@@ -19,6 +19,13 @@ impl MigrationTrait for Migration {
                 ("uuid", ColType::Uuid),
                 ("raw_name", ColType::Text),
                 ("size", ColType::String),
+                (
+                    "location",
+                    ColType::Enum(
+                        "location".to_string(),
+                        vec!["local".to_string(), "r2".to_string()],
+                    ),
+                ),
             ],
             &[],
         )

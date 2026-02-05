@@ -63,8 +63,9 @@
 				</div>
 
 				<p class="mt-2 text-xs text-base-content/60 transition-all duration-300">
-					当前选择: <span class="font-bold text-primary">{selectedType}</span>。
-					支持直接粘贴到您的文档中。
+					当前选择: <span class="font-bold text-primary transition-all duration-300"
+						>{selectedType}</span
+					>。 支持直接粘贴到您的文档中。
 				</p>
 			</div>
 		</div>
@@ -76,21 +77,21 @@
 			<h3 class="mb-2 card-title text-sm tracking-wide uppercase opacity-70">文件详情</h3>
 
 			<div class="flex flex-col gap-3 text-sm">
-				<div class="flex justify-between border-b border-base-200 pb-2">
+				<div class="flex justify-between border-b border-base-200 pb-2 transition-all duration-300">
 					<span class="opacity-60">文件名</span>
 					<span class="max-w-37.5 truncate font-medium" title={image.name}>{image.name}</span>
 				</div>
-				<div class="flex justify-between border-b border-base-200 pb-2">
+				<div class="flex justify-between border-b border-base-200 pb-2 transition-all duration-300">
 					<span class="opacity-60">文件大小</span>
 					<span class="font-mono">{(image.size! / 1024 / 1024).toFixed(2)} MB</span>
 				</div>
-				<div class="flex justify-between border-b border-base-200 pb-2">
+				<div class="flex justify-between border-b border-base-200 pb-2 transition-all duration-300">
 					<span class="opacity-60">分辨率</span>
 					<span class="font-mono">{image.width} x {image.height}</span>
 				</div>
 				<div class="flex justify-between">
 					<span class="opacity-60">格式</span>
-					<span class="badge badge-ghost badge-sm">{image.type}</span>
+					<span class="badge badge-ghost badge-sm transition-all duration-300">{image.type}</span>
 				</div>
 			</div>
 		</div>

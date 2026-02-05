@@ -2,7 +2,7 @@ use loco_rs::prelude::*;
 use serde::Deserialize;
 
 use crate::{
-    common::settings::SettingsService,
+    common::{client::reload, settings::SettingsService},
     models::users::users::{self, UserRole},
     views::settings::AppSettings,
 };
@@ -42,6 +42,11 @@ async fn update(
         && user.role == UserRole::Admin
     {
         SettingsService::set(&ctx.db, &params.name, &params.value).await?;
+
+        reload().await.map_err(|e| {
+            tracing::error!("error: {}", e);
+            Error::InternalServerError
+        })?;
     }
 
     format::json(())

@@ -1,5 +1,4 @@
 use aws_sdk_s3::primitives::ByteStream;
-use axum::Extension;
 use loco_rs::prelude::*;
 use mime_guess2::mime;
 use serde::{Deserialize, Serialize};
@@ -9,11 +8,11 @@ use std::{path::Path, sync::Arc};
 use tokio::fs::{self, File};
 use tokio::io::AsyncWriteExt;
 
-use crate::common::client::S3Client;
+use crate::common::client::{S3Client, get_garage, get_r2};
 use crate::common::settings::SettingsService;
 use crate::models::images;
 use crate::models::users::users;
-use crate::views::upload::UploadResponse;
+use crate::views::upload::{PresignResponse, UploadResponse};
 use crate::workers::thumbnail::{Worker, WorkerArgs};
 
 const TEMP_DIR: &str = "tmp_upload";
@@ -22,6 +21,14 @@ const TEMP_DIR: &str = "tmp_upload";
 pub struct UploadParams {
     pub public: Option<bool>,
     pub quality: u8,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PresignParams {
+    pub filename: String,
+    pub content_type: String,
+    pub size: i64,
 }
 
 pub struct UploadResult {
@@ -37,17 +44,17 @@ pub struct UploadResult {
 
 async fn upload(
     State(ctx): State<AppContext>,
-    Extension(s3_client): Extension<Arc<S3Client>>,
     Query(upload_params): Query<UploadParams>,
     multipart: Multipart,
 ) -> Result<Response> {
     if !SettingsService::allow_everyone_upload().await {
         return Err(Error::Unauthorized("Upload is not allowed".to_string()));
     }
+    let s3_client = get_garage();
 
     match upload_files(multipart, s3_client.clone(), &ctx, upload_params.quality).await {
         Ok(r) => {
-            images::Model::create_with_upload_result(&ctx.db, &r).await?;
+            images::Model::save_local_with_result(&ctx.db, &r).await?;
             format::json(UploadResponse::from(r))
         }
         Err(e) => {
@@ -61,19 +68,19 @@ async fn upload(
 async fn upload_with_jwt(
     jwt: auth::JWT,
     State(ctx): State<AppContext>,
-    Extension(s3_client): Extension<Arc<S3Client>>,
     Query(upload_params): Query<UploadParams>,
     multipart: Multipart,
 ) -> Result<Response> {
     let user = users::Model::find_by_pid(&ctx.db, &jwt.claims.pid).await?;
     let public = upload_params.public.unwrap_or(true);
 
+    let s3_client = get_garage();
     match upload_files(multipart, s3_client.clone(), &ctx, upload_params.quality).await {
         Ok(mut r) => {
             r.is_public = public;
             r.user_id = Some(user.pid);
 
-            images::Model::create_with_upload_result(&ctx.db, &r).await?;
+            images::Model::save_local_with_result(&ctx.db, &r).await?;
             let res = if public {
                 UploadResponse { url: Some(r.url) }
             } else {
@@ -93,7 +100,6 @@ async fn upload_with_jwt(
 async fn upload_with_token(
     auth: auth::ApiToken<users::Model>,
     State(ctx): State<AppContext>,
-    Extension(s3_client): Extension<Arc<S3Client>>,
     Query(upload_params): Query<UploadParams>,
     multipart: Multipart,
 ) -> Result<Response> {
@@ -224,10 +230,36 @@ async fn upload_files(
     Err(Error::BadRequest("No file".to_string()))
 }
 
+pub async fn presign(
+    auth: auth::JWT,
+    State(ctx): State<AppContext>,
+    Json(params): Json<PresignParams>,
+) -> Result<Response> {
+    let client = get_r2();
+
+    let ext = Path::new(&params.filename)
+        .extension()
+        .and_then(|s| s.to_str())
+        .unwrap_or("");
+    let key = format!("{}.{}", Uuid::new_v4(), ext);
+    let presigned_req = client
+        .presign(&key, &params.content_type, 300)
+        .await
+        .map_err(|e| {
+            tracing::error!("Failed to presign: {}", e.to_string());
+            Error::InternalServerError
+        })?;
+
+    format::json(PresignResponse {
+        upload_url: presigned_req.uri().to_string(),
+    })
+}
+
 pub fn routes() -> Routes {
     Routes::new()
         .prefix("/api")
         .add("/upload", post(upload))
         .add("/upload/jwt", post(upload_with_jwt))
         .add("/upload/token", post(upload_with_token))
+        .add("/presign", post(presign))
 }

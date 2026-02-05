@@ -1,20 +1,19 @@
 use axum::{
-    Extension,
     body::Body,
     http::{
         HeaderMap, StatusCode,
         header::{self, IF_NONE_MATCH},
     },
+    response::Redirect,
 };
 use loco_rs::prelude::*;
 use serde::Deserialize;
 use std::fmt::Write;
-use std::sync::Arc;
 use tokio_util::io::ReaderStream;
 
 use crate::{
     common::{
-        client::{Position, S3Client},
+        client::{Position, S3Client, get_garage, get_r2},
         settings::SettingsService,
     },
     models::{_entities::images, users::users},
@@ -31,33 +30,40 @@ pub struct ListViewParams {
 
 async fn view(
     State(ctx): State<AppContext>,
-    Extension(s3_client): Extension<Arc<S3Client>>,
     headers: HeaderMap,
     Path(name): Path<String>,
 ) -> Result<Response> {
-    images::Model::find_by_filename(&ctx.db, &name).await?;
+    if !check(&name) {
+        return Err(Error::NotFound);
+    }
 
-    fetch_file(headers, &s3_client, &name, Position::Webp).await
+    images::Model::find_by_filename_in_local(&ctx.db, &name).await?;
+    let s3_client = get_garage();
+
+    fetch_file(headers, s3_client, &name, Position::Webp).await
 }
 
 async fn preview(
     auth: auth::JWT,
     State(ctx): State<AppContext>,
-    Extension(s3_client): Extension<Arc<S3Client>>,
     headers: HeaderMap,
     Path(name): Path<String>,
 ) -> Result<Response> {
+    if name.len() != 41 {
+        return Err(Error::NotFound);
+    }
     let user_pid = auth.claims.pid;
     let user = users::Model::find_by_pid(&ctx.db, &user_pid).await?;
 
-    let uuid = &name[0..name.len() - 5];
+    let uuid = &name[..name.len() - 5];
 
-    if let Err(e) = images::Model::find_by_uuid_and_pid(&ctx.db, user.pid, uuid).await {
+    if let Err(e) = images::Model::find_by_uuid_and_pid_in_local(&ctx.db, user.pid, uuid).await {
         tracing::error!("Failed to find image by UUID and PID: {}", e);
         return Err(Error::NotFound);
     }
 
-    fetch_file(headers, &s3_client, &name, Position::Preview).await
+    let s3_client = get_garage();
+    fetch_file(headers, s3_client, &name, Position::Preview).await
 }
 
 async fn list(
@@ -70,7 +76,7 @@ async fn list(
 
     let page_size = params.limit.min(MAX_PAGE_SIZE);
     let (images, num_items_and_pages) =
-        images::Model::find_by_user_pid(&ctx.db, user.pid, params.page, page_size).await?;
+        images::Model::find_by_user_pid_in_local(&ctx.db, user.pid, params.page, page_size).await?;
 
     let local_base_url = SettingsService::local_base_url().await;
     let base_url = if local_base_url.trim().is_empty() {
@@ -150,10 +156,46 @@ async fn fetch_file(
     Ok(response)
 }
 
+// TODO: need optimize
+pub async fn r2_view(State(ctx): State<AppContext>, Path(name): Path<String>) -> Result<Response> {
+    if !check(&name) {
+        return Err(Error::NotFound);
+    }
+
+    // images::Model::find_by_filename(&ctx.db, &name).await?;
+    let client = get_r2();
+
+    let signed_url = client.sign_download_url(&name, 60).await.map_err(|e| {
+        tracing::error!("Failed to presign url: {}", e);
+        Error::InternalServerError
+    })?;
+
+    Ok(Redirect::temporary(&signed_url).into_response())
+}
+
+fn check(name: &str) -> bool {
+    if name.len() < 39 && name.len() > 42 {
+        return false;
+    }
+
+    let parts: Vec<&str> = name.rsplitn(2, '.').collect();
+    if parts.len() != 2 {
+        return false;
+    }
+
+    let uuid_part = parts[1];
+    if Uuid::parse_str(uuid_part).is_err() {
+        return false;
+    }
+
+    true
+}
+
 pub fn routes() -> Routes {
     Routes::new()
-        .prefix("/api/view")
-        .add("/{name}", get(view))
-        .add("/preview/{name}", get(preview))
-        .add("/list", get(list))
+        .prefix("/api")
+        .add("/view/{name}", get(view))
+        .add("/view/preview/{name}", get(preview))
+        .add("/view/list", get(list))
+        .add("/r2/view/{name}", get(r2_view))
 }

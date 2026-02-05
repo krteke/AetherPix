@@ -31,6 +31,7 @@
 
 			if (!res.ok) {
 				msg.alert('保存失败\n ' + (await res.text()), '保存失败', 'error');
+				return;
 			}
 
 			msg.alert('保存成功', '保存成功', 'success');
@@ -61,7 +62,9 @@
 						>
 						<button
 							class="btn btn-sm btn-primary"
+							disabled={!storage.edit}
 							onclick={async () => {
+								if (storage.value.trim().length === 0) return;
 								await save(storage.key, storage.value);
 								storage.edit = false;
 							}}>保存</button
@@ -91,7 +94,9 @@
 						>
 						<button
 							class="btn btn-sm btn-primary"
+							disabled={!storage.edit}
 							onclick={async () => {
+								if (storage.value.trim().length === 0) return;
 								await save(storage.key, storage.value);
 								storage.edit = false;
 							}}>保存</button

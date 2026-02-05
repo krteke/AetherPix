@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use axum::{Extension, Router};
+use axum::Router;
 use loco_rs::{
     Result,
     app::{AppContext, Hooks, Initializer},
@@ -15,7 +15,7 @@ use migration::Migrator;
 use std::path::Path;
 
 use crate::{
-    common::client::{get_garage, init_garage},
+    common::client::{init_garage, init_r2},
     models::_entities::settings,
 };
 #[allow(unused_imports)]
@@ -48,6 +48,7 @@ impl Hooks for App {
 
     async fn initializers(ctx: &AppContext) -> Result<Vec<Box<dyn Initializer>>> {
         init_garage(ctx).await;
+        init_r2(ctx).await;
 
         Ok(vec![])
     }
@@ -88,8 +89,6 @@ impl Hooks for App {
         Ok(())
     }
     async fn after_routes(router: Router, _ctx: &AppContext) -> Result<Router> {
-        let s3_client = get_garage().clone();
-
-        Ok(router.layer(Extension(s3_client)))
+        Ok(router)
     }
 }
