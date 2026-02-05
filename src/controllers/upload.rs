@@ -141,9 +141,9 @@ async fn upload_files(
 
         let uuid = Uuid::now_v7();
         let mut file_name = String::with_capacity(37 + ext.len());
-        let mut preview_name = String::with_capacity(41);
+        let mut webp_name = String::with_capacity(41);
         let _ = write!(file_name, "{}.{}", uuid, ext);
-        let _ = write!(preview_name, "{}.webp", uuid);
+        let _ = write!(webp_name, "{}.webp", uuid);
 
         let tmp_path = Path::new(TEMP_DIR).join(&file_name);
         let mut tmp_file = File::create(&tmp_path).await?;
@@ -184,7 +184,7 @@ async fn upload_files(
             .await;
 
         let args = WorkerArgs {
-            preview_key: preview_name,
+            preview_key: webp_name,
             tmp_file_guard,
         };
 

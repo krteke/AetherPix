@@ -1,9 +1,10 @@
-use std::{io::Cursor, path::PathBuf};
+use std::path::PathBuf;
 
 use aws_sdk_s3::primitives::ByteStream;
 use image::ImageReader;
 use loco_rs::prelude::*;
 use serde::{Deserialize, Serialize};
+use webp::{Encoder, WebPConfig};
 
 use crate::{common::client::get_garage, controllers::upload::TempFileGuard};
 
@@ -60,12 +61,13 @@ impl BackgroundWorker<WorkerArgs> for Worker {
         let preview_name = args.preview_key;
 
         let result = async move {
-            let thumbnail_data =
+            let (thumbnail_data, webp_data) =
                 tokio::task::spawn_blocking(move || process_thumbnail(tmp_file_path))
                     .await
                     .map_err(|e| e.to_string())?
                     .map_err(|e| e.to_string())?;
             let body = ByteStream::from(thumbnail_data);
+            let webp_body = ByteStream::from(webp_data);
 
             client
                 .pub_object(
@@ -73,6 +75,16 @@ impl BackgroundWorker<WorkerArgs> for Worker {
                     body,
                     "image/webp",
                     crate::common::client::Position::Preview,
+                )
+                .await
+                .map_err(|e| e.to_string())?;
+
+            client
+                .pub_object(
+                    &preview_name,
+                    webp_body,
+                    "image/webp",
+                    crate::common::client::Position::Webp,
                 )
                 .await
                 .map_err(|e| e.to_string())
@@ -90,7 +102,7 @@ impl BackgroundWorker<WorkerArgs> for Worker {
     }
 }
 
-fn process_thumbnail(file_path: PathBuf) -> Result<Vec<u8>, String> {
+fn process_thumbnail(file_path: PathBuf) -> Result<(Vec<u8>, Vec<u8>), String> {
     let img = ImageReader::open(file_path)
         .map_err(|e| e.to_string())?
         .with_guessed_format()
@@ -98,12 +110,25 @@ fn process_thumbnail(file_path: PathBuf) -> Result<Vec<u8>, String> {
         .decode()
         .map_err(|e| e.to_string())?;
 
+    let rgba = img.to_rgba8();
+    let mut config =
+        WebPConfig::new().map_err(|_| String::from("Could not create WebP configuration"))?;
+    config.method = 6;
+    config.quality = 100.0;
+    let webp_img = Encoder::from_rgba(rgba.as_raw(), rgba.width(), rgba.height())
+        .encode_advanced(&config)
+        .map_err(|e| format!("Failed to encode WebP image: {:#?}", e))?
+        .to_vec();
+
     let thumbnail = img.resize(400, 400, image::imageops::FilterType::Triangle);
+    let rgba = thumbnail.to_rgba8();
+    config.method = 0;
+    config.quality = 80.0;
 
-    let mut buffer = Cursor::new(Vec::new());
-    thumbnail
-        .write_to(&mut buffer, image::ImageFormat::WebP)
-        .map_err(|e| e.to_string())?;
+    let thumb = Encoder::from_rgba(rgba.as_raw(), rgba.width(), rgba.height())
+        .encode_advanced(&config)
+        .map_err(|e| format!("Failed to encode WebP image: {:#?}", e))?
+        .to_vec();
 
-    Ok(buffer.into_inner())
+    Ok((thumb, webp_img))
 }
