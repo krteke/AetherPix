@@ -40,12 +40,17 @@
   created_at: "2023-11-12T12:34:56.789Z"
   updated_at: "2023-11-12T12:34:56.789Z"
 - id: 9
-  key: bucket_name
+  key: origin_bucket_name
   value: test
   created_at: "2023-11-12T12:34:56.789Z"
   updated_at: "2023-11-12T12:34:56.789Z"
 - id: 10
   key: preview_bucket_name
   value: preview-test
+  created_at: "2023-11-12T12:34:56.789Z"
+  updated_at: "2023-11-12T12:34:56.789Z"
+- id: 11
+  key: webp_bucket_name
+  value: webp-test
   created_at: "2023-11-12T12:34:56.789Z"
   updated_at: "2023-11-12T12:34:56.789Z"

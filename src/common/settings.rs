@@ -2,17 +2,11 @@ use std::{collections::HashMap, sync::LazyLock};
 
 use loco_rs::Result;
 use migration::OnConflict;
-use sea_orm::{
-    ActiveModelTrait, ActiveValue::Set, ColumnTrait, DatabaseConnection, EntityTrait,
-    IntoActiveModel, QueryFilter,
-};
+use sea_orm::{ActiveValue::Set, DatabaseConnection, EntityTrait};
 use serde_json::Value;
 use tokio::sync::RwLock;
 
-use crate::{
-    common::settings::keys::DEFAULT_REGION, models::_entities::settings,
-    views::settings::AppSettings,
-};
+use crate::{common::settings::keys::*, models::_entities::settings, views::settings::AppSettings};
 
 static SETTINGS_CACHE: LazyLock<RwLock<HashMap<String, String>>> =
     LazyLock::new(|| RwLock::new(HashMap::new()));
@@ -31,10 +25,22 @@ mod keys {
     pub const AWS_REGION: &str = "aws_region";
     pub const AWS_ENDPOINT_URL: &str = "aws_endpoint_url";
 
-    pub const BUCKET_NAME: &str = "bucket_name";
+    pub const ORIGIN_BUCKET_NAME: &str = "origin_bucket_name";
     pub const PREVIEW_BUCKET_NAME: &str = "preview_bucket_name";
+    pub const WEBP_BUCKET_NAME: &str = "webp_bucket_name";
 
     pub const DEFAULT_REGION: &str = "garage";
+
+    pub const R2_ACCESS_KEY_ID: &str = "r2_access_key_id";
+    pub const R2_SECRET_ACCESS_KEY: &str = "r2_secret_access_key";
+    pub const R2_REGION: &str = "r2_region";
+    pub const R2_ENDPOINT_URL: &str = "r2_endpoint_url";
+
+    pub const R2_BUCKET_NAME: &str = "r2_bucket_name";
+    pub const DEFAULT_R2_REGION: &str = "auto";
+
+    pub const LOCAL_BASE_URL: &str = "local_base_url";
+    pub const R2_BASE_URL: &str = "r2_base_url";
 }
 
 impl SettingsService {
@@ -81,12 +87,44 @@ impl SettingsService {
         Self::get(keys::AWS_ENDPOINT_URL, "").await
     }
 
-    pub async fn bucket_name() -> String {
-        Self::get(keys::BUCKET_NAME, "").await
+    pub async fn origin_bucket_name() -> String {
+        Self::get(keys::ORIGIN_BUCKET_NAME, "").await
     }
 
     pub async fn preview_bucket_name() -> String {
         Self::get(keys::PREVIEW_BUCKET_NAME, "").await
+    }
+
+    pub async fn webp_bucket_name() -> String {
+        Self::get(keys::WEBP_BUCKET_NAME, "").await
+    }
+
+    pub async fn r2_access_key_id() -> String {
+        Self::get(keys::R2_ACCESS_KEY_ID, "").await
+    }
+
+    pub async fn r2_secret_access_key() -> String {
+        Self::get(keys::R2_SECRET_ACCESS_KEY, "").await
+    }
+
+    pub async fn r2_region() -> String {
+        Self::get(keys::R2_REGION, DEFAULT_R2_REGION).await
+    }
+
+    pub async fn r2_endpoint_url() -> String {
+        Self::get(keys::R2_ENDPOINT_URL, "").await
+    }
+
+    pub async fn r2_bucket_name() -> String {
+        Self::get(keys::R2_BUCKET_NAME, "").await
+    }
+
+    pub async fn local_base_url() -> String {
+        Self::get(keys::LOCAL_BASE_URL, "").await
+    }
+
+    pub async fn r2_base_url() -> String {
+        Self::get(keys::R2_BASE_URL, "").await
     }
 
     pub async fn get_app_settings() -> AppSettings {
@@ -95,6 +133,8 @@ impl SettingsService {
             allow_registration: Self::allow_registration().await,
             site_name: Self::site_name().await,
             allow_everyone_upload: Self::allow_everyone_upload().await,
+            local_base_url: Self::local_base_url().await,
+            r2_base_url: Self::r2_base_url().await,
         }
     }
 
@@ -110,6 +150,11 @@ impl SettingsService {
                     Value::Number(n) => n.to_string(),
                     _ => v.to_string(),
                 };
+
+                SETTINGS_CACHE
+                    .write()
+                    .await
+                    .insert(k.clone(), val_str.to_string());
 
                 models.push(settings::ActiveModel {
                     key: Set(k),
@@ -151,22 +196,20 @@ impl SettingsService {
     }
 
     pub async fn set(db: &DatabaseConnection, key: &str, value: &str) -> Result<()> {
-        let setting = settings::Entity::find()
-            .filter(settings::Column::Key.eq(key))
-            .one(db)
-            .await?;
-
-        let mut active_model = if let Some(s) = setting {
-            s.into_active_model()
-        } else {
-            settings::ActiveModel {
-                key: Set(key.to_string()),
-                ..Default::default()
-            }
+        let model = settings::ActiveModel {
+            key: Set(key.to_string()),
+            value: Set(value.to_string()),
+            ..Default::default()
         };
 
-        active_model.value = Set(value.to_string());
-        active_model.save(db).await?;
+        settings::Entity::insert(model)
+            .on_conflict(
+                OnConflict::column(settings::Column::Key)
+                    .update_column(settings::Column::Value)
+                    .to_owned(),
+            )
+            .exec(db)
+            .await?;
 
         let mut cache = SETTINGS_CACHE.write().await;
         cache.insert(key.to_string(), value.to_string());

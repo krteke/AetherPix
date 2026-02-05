@@ -4,19 +4,27 @@ class SettingsStore {
 	settings: AppSettings | null = $state(null);
 
 	get allowRegister() {
-		return this.settings?.allowRegistration ?? false;
+		return this.settings?.allow_registration ?? false;
 	}
 
 	get allowEveryoneUpload() {
-		return this.settings?.allowEveryoneUpload ?? false;
+		return this.settings?.allow_everyone_upload ?? false;
 	}
 
 	get siteName() {
-		return this.settings?.siteName ?? '';
+		return this.settings?.site_name ?? '';
 	}
 
 	get uploadMaxSize() {
-		return this.settings?.uploadMaxSize ?? 0;
+		return this.settings?.upload_max_size ?? 0;
+	}
+
+	get localBaseUrl() {
+		return this.settings?.local_base_url ?? '';
+	}
+
+	get r2BaseUrl() {
+		return this.settings?.r2_base_url ?? '';
 	}
 
 	get exists() {

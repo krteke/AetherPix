@@ -7,6 +7,7 @@
 	import { auth } from '$lib/state/auth.svelte';
 
 	let isDragging = $state(false);
+	let quality = $state(80);
 
 	// 设置选项
 	let storageLocation: UploadLocation = $state(uploader.uploadLocation);
@@ -20,6 +21,7 @@
 	$effect(() => {
 		queue.forEach((item) => {
 			item.isPublic = isPublic;
+			item.quality = quality;
 		});
 	});
 
@@ -232,9 +234,9 @@
 					<h2 class="mb-4 card-title text-lg">上传设置</h2>
 
 					<!-- 存储位置选择 -->
-					<div class="form-control w-full">
+					<div class="w-full">
 						<label class="label" for="location-select">
-							<span class="label-text font-medium">存储位置</span>
+							<span class="font-medium">存储位置</span>
 						</label>
 						<select
 							id="location-select"
@@ -247,7 +249,7 @@
 							<option value="local">Local VPS</option>
 						</select>
 						<div class="label">
-							<span class="label-text-alt opacity-60">当前剩余空间: 充足</span>
+							<span class="opacity-60">当前剩余空间: 充足</span>
 						</div>
 					</div>
 
@@ -255,9 +257,9 @@
 						<div class="divider my-2"></div>
 
 						<!-- 访问权限 -->
-						<div class="form-control">
+						<div>
 							<label class="label cursor-pointer">
-								<span class="label-text font-medium">公开访问</span>
+								<span class="font-medium">公开访问</span>
 								<input
 									type="checkbox"
 									class="toggle transition-all duration-300 toggle-primary"
@@ -268,6 +270,25 @@
 								{isPublic
 									? '任何持有链接的人都可以访问图片。'
 									: '不生成访问链接，只有设置密码或时效后才生成临时链接。'}
+							</div>
+						</div>
+					{/if}
+					{#if storageLocation == 'local'}
+						<div class="divider my-2"></div>
+						<div>
+							<label class="label cursor-pointer" for="quality">
+								<span class="font-medium">图片质量</span>
+							</label>
+							<input
+								id="quality"
+								type="range"
+								class="range range-primary range-xs"
+								min="1"
+								max="100"
+								bind:value={quality}
+							/>
+							<div class="px-1 text-xs text-base-content/60 transition-all duration-300">
+								{quality}%
 							</div>
 						</div>
 					{/if}

@@ -45,8 +45,9 @@
 		<h2 class="mb-4 card-title text-xl text-error">修改密码</h2>
 		<form onsubmit={updatePassword} class="flex max-w-md flex-col gap-4">
 			<div>
-				<label class="label"><span>当前密码</span></label>
+				<label class="label" for="current_pass">当前密码</label>
 				<input
+					id="current_pass"
 					type="password"
 					bind:value={currentPass}
 					required
@@ -55,8 +56,9 @@
 			</div>
 			<div class="divider my-0"></div>
 			<div>
-				<label class="label"><span>新密码</span></label>
+				<label class="label" for="new_pass">新密码</label>
 				<input
+					id="new_pass"
 					type="password"
 					bind:value={newPass}
 					required
@@ -67,8 +69,9 @@
 				<label class="label"><span class="opacity-60">最少 8 个字符</span></label>
 			</div>
 			<div>
-				<label class="label"><span>确认新密码</span></label>
+				<label class="label" for="confirm_pass"><span>确认新密码</span></label>
 				<input
+					id="confirm_pass"
 					type="password"
 					bind:value={confirmPass}
 					required

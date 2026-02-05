@@ -12,6 +12,7 @@ export interface UploadItem {
 	file: File;
 	status: UploadStatus;
 	isPublic: boolean;
+	quality: number;
 	progress: number; // 0-100
 	speed: string; // e.g., "1.2 MB/s"
 	loaded: number; // 已上传字节数
@@ -54,6 +55,7 @@ class UploadManager {
 			name: file.name,
 			file,
 			isPublic: true,
+			quality: 100,
 			status: 'pending',
 			progress: 0,
 			speed: '0 KB/s',
@@ -161,7 +163,8 @@ class UploadManager {
 
 		// 发送请求
 		let url = this.uploadUrl();
-		if (url !== '/api/upload') url = `${this.uploadUrl()}?public=${item.isPublic}`;
+		if (this.uploadLocation === 'local')
+			url = `${this.uploadUrl()}?public=${item.isPublic}&quality=${item.quality}`;
 		xhr.open('POST', url, true);
 
 		const formData = new FormData();

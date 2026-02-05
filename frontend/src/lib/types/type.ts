@@ -8,10 +8,12 @@ export type UserResponse = {
 export type UserRole = 'admin' | 'user';
 
 export type AppSettings = {
-	uploadMaxSize: number;
-	allowRegistration: boolean;
-	siteName: string;
-	allowEveryoneUpload: boolean;
+	upload_max_size: number;
+	allow_registration: boolean;
+	site_name: string;
+	allow_everyone_upload: boolean;
+	local_base_url: string;
+	r2_base_url: string;
 };
 
 export type UploadResponse = {

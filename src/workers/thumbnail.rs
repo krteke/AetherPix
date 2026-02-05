@@ -17,6 +17,7 @@ pub struct WorkerArgs {
     // pub file_path: String,
     pub tmp_file_guard: TempFileGuard,
     pub preview_key: String,
+    pub quality: u8,
 }
 
 #[async_trait]
@@ -62,7 +63,7 @@ impl BackgroundWorker<WorkerArgs> for Worker {
 
         let result = async move {
             let (thumbnail_data, webp_data) =
-                tokio::task::spawn_blocking(move || process_thumbnail(tmp_file_path))
+                tokio::task::spawn_blocking(move || process_thumbnail(tmp_file_path, args.quality))
                     .await
                     .map_err(|e| e.to_string())?
                     .map_err(|e| e.to_string())?;
@@ -102,7 +103,7 @@ impl BackgroundWorker<WorkerArgs> for Worker {
     }
 }
 
-fn process_thumbnail(file_path: PathBuf) -> Result<(Vec<u8>, Vec<u8>), String> {
+fn process_thumbnail(file_path: PathBuf, quality: u8) -> Result<(Vec<u8>, Vec<u8>), String> {
     let img = ImageReader::open(file_path)
         .map_err(|e| e.to_string())?
         .with_guessed_format()
@@ -114,7 +115,7 @@ fn process_thumbnail(file_path: PathBuf) -> Result<(Vec<u8>, Vec<u8>), String> {
     let mut config =
         WebPConfig::new().map_err(|_| String::from("Could not create WebP configuration"))?;
     config.method = 6;
-    config.quality = 100.0;
+    config.quality = quality as f32;
     let webp_img = Encoder::from_rgba(rgba.as_raw(), rgba.width(), rgba.height())
         .encode_advanced(&config)
         .map_err(|e| format!("Failed to encode WebP image: {:#?}", e))?

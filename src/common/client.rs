@@ -26,12 +26,14 @@ pub async fn init_garage(ctx: &AppContext) {
         .await
         .expect("加载系统配置失败");
 
-    let bucket_name = SettingsService::bucket_name().await;
+    let origin_bucket_name = SettingsService::origin_bucket_name().await;
     let preview_bucket_name = SettingsService::preview_bucket_name().await;
+    let webp_bucket_name = SettingsService::webp_bucket_name().await;
     let s3_client = Arc::new(S3Client::new(
         init_s3_client().await,
-        bucket_name,
+        origin_bucket_name,
         preview_bucket_name,
+        webp_bucket_name,
     ));
 
     S3_GARAGE.set(s3_client).expect("初始化S3客户端失败");
@@ -44,28 +46,37 @@ pub fn get_garage() -> &'static Arc<S3Client> {
 #[derive(Debug)]
 pub struct S3Client {
     client: Client,
-    bucket: String,
+    origin_bucket: String,
     preview_bucket: String,
+    webp_bucket: String,
 }
 
 pub enum Position {
     Original,
     Preview,
+    Webp,
 }
 
 impl S3Client {
-    pub fn new(client: Client, bucket: String, preview_bucket: String) -> Self {
+    pub fn new(
+        client: Client,
+        origin_bucket: String,
+        preview_bucket: String,
+        webp_bucket: String,
+    ) -> Self {
         Self {
             client,
-            bucket,
+            origin_bucket,
             preview_bucket,
+            webp_bucket,
         }
     }
 
     fn position(&self, position: Position) -> &str {
         match position {
-            Position::Original => &self.bucket,
+            Position::Original => &self.origin_bucket,
             Position::Preview => &self.preview_bucket,
+            Position::Webp => &self.webp_bucket,
         }
     }
 
@@ -119,4 +130,16 @@ async fn init_s3_client() -> Client {
         .build();
 
     aws_sdk_s3::Client::new(&config)
+}
+
+#[derive(Debug)]
+pub struct R2Client {
+    client: Client,
+    bucket: String,
+}
+
+impl R2Client {
+    pub async fn new(bucket: String) -> Self {
+        todo!()
+    }
 }

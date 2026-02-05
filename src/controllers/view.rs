@@ -13,7 +13,10 @@ use std::sync::Arc;
 use tokio_util::io::ReaderStream;
 
 use crate::{
-    common::client::{Position, S3Client},
+    common::{
+        client::{Position, S3Client},
+        settings::SettingsService,
+    },
     models::{_entities::images, users::users},
     views::view::{Image, ListViewResponse},
 };
@@ -34,7 +37,7 @@ async fn view(
 ) -> Result<Response> {
     images::Model::find_by_filename(&ctx.db, &name).await?;
 
-    fetch_file(headers, &s3_client, &name, Position::Original).await
+    fetch_file(headers, &s3_client, &name, Position::Webp).await
 }
 
 async fn preview(
@@ -69,12 +72,18 @@ async fn list(
     let (images, num_items_and_pages) =
         images::Model::find_by_user_pid(&ctx.db, user.pid, params.page, page_size).await?;
 
-    let base_url = ctx.config.server.full_url() + "/api/view/preview/";
+    let local_base_url = SettingsService::local_base_url().await;
+    let base_url = if local_base_url.trim().is_empty() {
+        ctx.config.server.full_url() + "/api/view/preview"
+    } else {
+        local_base_url + "/preview"
+    };
+
     let images: Vec<Image> = images
         .into_iter()
         .map(|m| {
             let mut url = String::with_capacity(base_url.len() + 41);
-            let _ = write!(url, "{}{}.webp", base_url, m.uuid);
+            let _ = write!(url, "{}/{}.webp", base_url, m.uuid);
 
             Image {
                 preview_url: url,

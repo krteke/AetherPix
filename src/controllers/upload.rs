@@ -20,7 +20,8 @@ const TEMP_DIR: &str = "tmp_upload";
 
 #[derive(Debug, Deserialize)]
 pub struct UploadParams {
-    pub public: bool,
+    pub public: Option<bool>,
+    pub quality: u8,
 }
 
 pub struct UploadResult {
@@ -37,15 +38,14 @@ pub struct UploadResult {
 async fn upload(
     State(ctx): State<AppContext>,
     Extension(s3_client): Extension<Arc<S3Client>>,
-    // Query(upload_params): Query<UploadParams>,
+    Query(upload_params): Query<UploadParams>,
     multipart: Multipart,
 ) -> Result<Response> {
     if !SettingsService::allow_everyone_upload().await {
         return Err(Error::Unauthorized("Upload is not allowed".to_string()));
     }
-    let base_url = ctx.config.server.full_url();
 
-    match upload_files(multipart, s3_client.clone(), &ctx, &base_url).await {
+    match upload_files(multipart, s3_client.clone(), &ctx, upload_params.quality).await {
         Ok(r) => {
             images::Model::create_with_upload_result(&ctx.db, &r).await?;
             format::json(UploadResponse::from(r))
@@ -66,15 +66,15 @@ async fn upload_with_jwt(
     multipart: Multipart,
 ) -> Result<Response> {
     let user = users::Model::find_by_pid(&ctx.db, &jwt.claims.pid).await?;
-    let base_url = ctx.config.server.full_url();
+    let public = upload_params.public.unwrap_or(true);
 
-    match upload_files(multipart, s3_client.clone(), &ctx, &base_url).await {
+    match upload_files(multipart, s3_client.clone(), &ctx, upload_params.quality).await {
         Ok(mut r) => {
-            r.is_public = upload_params.public;
+            r.is_public = public;
             r.user_id = Some(user.pid);
 
             images::Model::create_with_upload_result(&ctx.db, &r).await?;
-            let res = if upload_params.public {
+            let res = if public {
                 UploadResponse { url: Some(r.url) }
             } else {
                 UploadResponse { url: None }
@@ -120,7 +120,7 @@ async fn upload_files(
     mut multipart: Multipart,
     client: Arc<S3Client>,
     ctx: &AppContext,
-    base_url: &str,
+    quality: u8,
 ) -> Result<UploadResult> {
     tokio::fs::create_dir_all(TEMP_DIR).await?;
 
@@ -183,9 +183,11 @@ async fn upload_files(
             )
             .await;
 
+        let quality = quality.min(100);
         let args = WorkerArgs {
-            preview_key: webp_name,
+            preview_key: webp_name.clone(),
             tmp_file_guard,
+            quality,
         };
 
         if let Err(e) = Worker::perform_later(ctx, args).await {
@@ -195,9 +197,16 @@ async fn upload_files(
         match result {
             Ok(_) => {
                 tracing::debug!("Ok, uploaded file to S3");
+                let local_base_url = SettingsService::local_base_url().await;
+                let url = if local_base_url.trim().is_empty() {
+                    ctx.config.server.full_url() + "/api/view"
+                } else {
+                    local_base_url.to_string()
+                };
+
                 return Ok(UploadResult {
-                    url: format!("{}/api/view/{}", base_url, file_name),
-                    file_name,
+                    url: format!("{}/{}", url, webp_name),
+                    file_name: webp_name,
                     is_public: true,
                     user_id: None,
                     uuid,

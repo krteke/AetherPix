@@ -61,8 +61,9 @@
 		>
 			<div class="grid grid-cols-1 gap-4 md:grid-cols-2">
 				<div>
-					<label class="label"><span class="label-text">用户名</span></label>
+					<label class="label" for="username">用户名</label>
 					<input
+						id="username"
 						type="text"
 						value={name}
 						disabled
@@ -70,8 +71,9 @@
 					/>
 				</div>
 				<div>
-					<label class="label"><span class="label-text">电子邮箱</span></label>
+					<label class="label" for="email">电子邮箱</label>
 					<input
+						id="email"
 						type="email"
 						value={email}
 						disabled
@@ -80,8 +82,9 @@
 				</div>
 			</div>
 			<div>
-				<label class="label"><span class="label-text">API Token</span></label>
+				<label class="label" for="token">API Token</label>
 				<input
+					id="token"
 					{type}
 					value={apiKey()}
 					disabled
