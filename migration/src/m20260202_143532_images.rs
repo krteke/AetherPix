@@ -18,7 +18,7 @@ impl MigrationTrait for Migration {
                 ("file_name", ColType::Text),
                 ("uuid", ColType::Uuid),
                 ("raw_name", ColType::Text),
-                ("size", ColType::String),
+                // ("size", ColType::String),
                 (
                     "location",
                     ColType::Enum(

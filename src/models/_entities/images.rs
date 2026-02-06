@@ -16,7 +16,7 @@ pub struct Model {
     pub public: bool,
     #[sea_orm(column_type = "Text")]
     pub raw_name: String,
-    pub size: String,
+    // pub size: String,
     #[sea_orm(column_type = "Text")]
     pub file_name: String,
     #[sea_orm(unique)]

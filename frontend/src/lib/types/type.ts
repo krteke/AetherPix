@@ -31,7 +31,7 @@ export type Image = {
 	previewUrl: string;
 	originalUrl: string;
 	name: string;
-	size: string;
+	// size: string;
 };
 
 export type UserProfileResponse = {

@@ -219,7 +219,7 @@
 							<div
 								class="flex justify-between text-xs text-base-content/60 transition-all duration-300"
 							>
-								<span>{img.size}</span>
+								<!-- <span>{img.size}</span> -->
 							</div>
 						</div>
 					</div>
@@ -236,7 +236,7 @@
 						<tr class="transition-all duration-300">
 							<th>预览</th>
 							<th>文件名</th>
-							<th>大小</th>
+							<!-- <th>大小</th> -->
 							<th class="text-right">操作</th>
 						</tr>
 					</thead>
@@ -253,7 +253,7 @@
 								<td>
 									<div class="max-w-50 truncate font-bold" title={img.name}>{img.name}</div>
 								</td>
-								<td class="font-mono text-sm">{img.size}</td>
+								<!-- <td class="font-mono text-sm">{img.size}</td> -->
 								<td class="text-right">
 									<button class="btn btn-ghost btn-xs" onclick={() => copyLink(img.originalUrl)}
 										>复制链接</button

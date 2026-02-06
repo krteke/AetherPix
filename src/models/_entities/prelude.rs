@@ -2,4 +2,5 @@
 
 pub use super::images::Entity as Images;
 pub use super::settings::Entity as Settings;
+pub use super::tmps::Entity as Tmps;
 pub use super::users::Entity as Users;

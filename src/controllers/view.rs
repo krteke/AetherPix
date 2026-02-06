@@ -16,7 +16,10 @@ use crate::{
         client::{Position, S3Client, get_garage, get_r2},
         settings::SettingsService,
     },
-    models::{_entities::images, users::users},
+    models::{
+        _entities::images::{self, Location},
+        users::users,
+    },
     views::view::{Image, ListViewResponse},
 };
 
@@ -37,10 +40,10 @@ async fn view(
         return Err(Error::NotFound);
     }
 
-    images::Model::find_by_filename_in_local(&ctx.db, &name).await?;
+    images::Model::find_by_filename(&ctx.db, &name, Some(Location::Local)).await?;
     let s3_client = get_garage();
 
-    fetch_file(headers, s3_client, &name, Position::Webp).await
+    fetch_file(headers, s3_client, &name, Position::Avif).await
 }
 
 async fn preview(
@@ -57,7 +60,9 @@ async fn preview(
 
     let uuid = &name[..name.len() - 5];
 
-    if let Err(e) = images::Model::find_by_uuid_and_pid_in_local(&ctx.db, user.pid, uuid).await {
+    if let Err(e) =
+        images::Model::find_by_uuid_and_pid(&ctx.db, user.pid, uuid, Some(Location::Local)).await
+    {
         tracing::error!("Failed to find image by UUID and PID: {}", e);
         return Err(Error::NotFound);
     }
@@ -76,26 +81,35 @@ async fn list(
 
     let page_size = params.limit.min(MAX_PAGE_SIZE);
     let (images, num_items_and_pages) =
-        images::Model::find_by_user_pid_in_local(&ctx.db, user.pid, params.page, page_size).await?;
+        images::Model::find_by_user_pid(&ctx.db, user.pid, params.page, page_size, None).await?;
 
     let local_base_url = SettingsService::local_base_url().await;
     let base_url = if local_base_url.trim().is_empty() {
         ctx.config.server.full_url() + "/api/view/preview"
     } else {
-        local_base_url + "/preview"
+        local_base_url.clone() + "/preview"
+    };
+
+    let r2_base_url = if local_base_url.trim().is_empty() {
+        ctx.config.server.full_url() + "/api/r2/view"
+    } else {
+        local_base_url + "/r2/view"
     };
 
     let images: Vec<Image> = images
         .into_iter()
         .map(|m| {
-            let mut url = String::with_capacity(base_url.len() + 41);
-            let _ = write!(url, "{}/{}.webp", base_url, m.uuid);
+            let url = if m.location == Location::Local {
+                format!("{}/{}.avif", base_url, m.uuid)
+            } else {
+                format!("{}/{}.avif", r2_base_url, m.url)
+            };
 
             Image {
                 preview_url: url,
                 original_url: m.url,
                 name: m.raw_name,
-                size: m.size,
+                // size: m.size,
                 id: m.id,
             }
         })
@@ -156,13 +170,12 @@ async fn fetch_file(
     Ok(response)
 }
 
-// TODO: need optimize
 pub async fn r2_view(State(ctx): State<AppContext>, Path(name): Path<String>) -> Result<Response> {
     if !check(&name) {
         return Err(Error::NotFound);
     }
 
-    // images::Model::find_by_filename(&ctx.db, &name).await?;
+    images::Model::find_by_filename(&ctx.db, &name, Some(Location::R2)).await?;
     let client = get_r2();
 
     let signed_url = client.sign_download_url(&name, 60).await.map_err(|e| {

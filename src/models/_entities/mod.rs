@@ -4,4 +4,5 @@ pub mod prelude;
 
 pub mod images;
 pub mod settings;
+pub mod tmps;
 pub mod users;

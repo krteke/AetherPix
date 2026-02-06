@@ -26,19 +26,21 @@ impl ActiveModelBehavior for ActiveModel {
 
 // implement your read-oriented logic here
 impl Model {
-    pub async fn find_by_user_pid_in_local(
+    pub async fn find_by_user_pid(
         db: &DatabaseConnection,
         pid: Uuid,
         page: u64,
         page_size: u64,
+        location: Option<Location>,
     ) -> ModelResult<(Vec<Self>, ItemsAndPagesNumber)> {
+        let mut filter = model::query::condition();
+        if let Some(loc) = location {
+            filter = filter.eq(images::Column::Location, loc);
+        }
+        filter = filter.eq(images::Column::UserPid, Some(pid));
+
         let query = images::Entity::find()
-            .filter(
-                model::query::condition()
-                    .eq(images::Column::Location, Location::Local)
-                    .eq(images::Column::UserPid, Some(pid))
-                    .build(),
-            )
+            .filter(filter.build())
             .order_by_desc(images::Column::Id)
             .paginate(db, page_size);
         let num_items_and_pages = query.num_items_and_pages().await?;
@@ -49,39 +51,45 @@ impl Model {
         Ok((images, num_items_and_pages))
     }
 
-    pub async fn find_by_uuid_and_pid_in_local(
+    pub async fn find_by_uuid_and_pid(
         db: &DatabaseConnection,
         pid: Uuid,
         uuid: &str,
+        location: Option<Location>,
     ) -> ModelResult<Model> {
         let parse_uuid = Uuid::parse_str(uuid).map_err(|e| ModelError::Any(e.into()))?;
 
+        let mut filter = model::query::condition();
+        if let Some(loc) = location {
+            filter = filter.eq(images::Column::Location, loc);
+        }
+        filter = filter
+            .eq(images::Column::Uuid, parse_uuid)
+            .eq(images::Column::UserPid, pid);
+
         let image = images::Entity::find()
-            .filter(
-                model::query::condition()
-                    .eq(images::Column::Location, Location::Local)
-                    .eq(images::Column::Uuid, parse_uuid)
-                    .eq(images::Column::UserPid, pid)
-                    .build(),
-            )
+            .filter(filter.build())
             .one(db)
             .await?;
 
         image.ok_or_else(|| ModelError::EntityNotFound)
     }
 
-    pub async fn find_by_filename_in_local(
+    pub async fn find_by_filename(
         db: &DatabaseConnection,
         filename: &str,
+        location: Option<Location>,
     ) -> ModelResult<Self> {
+        let mut filter = model::query::condition();
+        if let Some(loc) = location {
+            filter = filter.eq(images::Column::Location, loc);
+        }
+        filter = filter
+            .eq(images::Column::FileName, filename)
+            .eq(images::Column::Public, true);
+
         let images = images::Entity::find()
-            .filter(
-                model::query::condition()
-                    .eq(images::Column::Location, Location::Local)
-                    .eq(images::Column::FileName, filename)
-                    .eq(images::Column::Public, true)
-                    .build(),
-            )
+            .filter(filter.build())
             .one(db)
             .await?;
 
@@ -114,7 +122,7 @@ impl Model {
             url: Set(upload_result.url.clone()),
             uuid: Set(upload_result.uuid),
             raw_name: Set(upload_result.raw_name.clone()),
-            size: Set(upload_result.size.clone()),
+            // size: Set(upload_result.size.clone()),
             location: Set(images::Location::Local),
             ..Default::default()
         }

@@ -14,5 +14,5 @@ pub struct Image {
     pub preview_url: String,
     pub original_url: String,
     pub name: String,
-    pub size: String,
+    // pub size: String,
 }

@@ -183,7 +183,7 @@ class UploadManager {
 						'Content-Type': 'application/json'
 					},
 					body: JSON.stringify({
-						filename: item.file.name,
+						fileName: item.file.name,
 						contentType: item.file.type,
 						size: item.file.size
 					})
