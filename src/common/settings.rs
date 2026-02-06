@@ -1,0 +1,219 @@
+use std::{collections::HashMap, sync::LazyLock};
+
+use loco_rs::Result;
+use migration::OnConflict;
+use sea_orm::{ActiveValue::Set, DatabaseConnection, EntityTrait};
+use serde_json::Value;
+use tokio::sync::RwLock;
+
+use crate::{common::settings::keys::*, models::_entities::settings, views::settings::AppSettings};
+
+static SETTINGS_CACHE: LazyLock<RwLock<HashMap<String, String>>> =
+    LazyLock::new(|| RwLock::new(HashMap::new()));
+
+pub struct SettingsService;
+
+mod keys {
+    pub const UPLOAD_MAX_SIZE: &str = "upload_max_size_mb";
+    pub const ALLOW_REGISTRATION: &str = "allow_registration";
+    pub const SITE_NAME: &str = "site_name";
+    pub const ALLOW_EVERYONE_UPLOAD: &str = "allow_everyone_upload";
+
+    // secret, local garage
+    pub const AWS_ACCESS_KEY_ID: &str = "aws_access_key_id";
+    pub const AWS_SECRET_ACCESS_KEY: &str = "aws_secret_access_key";
+    pub const AWS_REGION: &str = "aws_region";
+    pub const AWS_ENDPOINT_URL: &str = "aws_endpoint_url";
+
+    pub const ORIGIN_BUCKET_NAME: &str = "origin_bucket_name";
+    pub const PREVIEW_BUCKET_NAME: &str = "preview_bucket_name";
+    pub const AVIF_BUCKET_NAME: &str = "avif_bucket_name";
+
+    pub const DEFAULT_REGION: &str = "garage";
+
+    pub const R2_ACCESS_KEY_ID: &str = "r2_access_key_id";
+    pub const R2_SECRET_ACCESS_KEY: &str = "r2_secret_access_key";
+    pub const R2_REGION: &str = "r2_region";
+    pub const R2_ENDPOINT_URL: &str = "r2_endpoint_url";
+
+    pub const R2_BUCKET_NAME: &str = "r2_bucket_name";
+    pub const DEFAULT_R2_REGION: &str = "auto";
+
+    pub const LOCAL_BASE_URL: &str = "local_base_url";
+    pub const R2_BASE_URL: &str = "r2_base_url";
+}
+
+impl SettingsService {
+    pub async fn load(db: &DatabaseConnection) -> Result<()> {
+        let all_settings = settings::Entity::find().all(db).await?;
+
+        let mut cache = SETTINGS_CACHE.write().await;
+        for setting in all_settings {
+            cache.insert(setting.key, setting.value);
+        }
+        tracing::info!("系统配置已加载");
+        Ok(())
+    }
+
+    pub async fn max_upload_size() -> u64 {
+        Self::get_u64(keys::UPLOAD_MAX_SIZE, 10).await
+    }
+
+    pub async fn allow_registration() -> bool {
+        Self::get_bool(keys::ALLOW_REGISTRATION, false).await
+    }
+
+    pub async fn site_name() -> String {
+        Self::get(keys::SITE_NAME, "AetherPix").await
+    }
+
+    pub async fn allow_everyone_upload() -> bool {
+        Self::get_bool(keys::ALLOW_EVERYONE_UPLOAD, false).await
+    }
+
+    pub async fn aws_access_key_id() -> String {
+        Self::get(keys::AWS_ACCESS_KEY_ID, "").await
+    }
+
+    pub async fn aws_secret_access_key() -> String {
+        Self::get(keys::AWS_SECRET_ACCESS_KEY, "").await
+    }
+
+    pub async fn aws_region() -> String {
+        Self::get(keys::AWS_REGION, DEFAULT_REGION).await
+    }
+
+    pub async fn aws_endpoint_url() -> String {
+        Self::get(keys::AWS_ENDPOINT_URL, "").await
+    }
+
+    pub async fn origin_bucket_name() -> String {
+        Self::get(keys::ORIGIN_BUCKET_NAME, "").await
+    }
+
+    pub async fn preview_bucket_name() -> String {
+        Self::get(keys::PREVIEW_BUCKET_NAME, "").await
+    }
+
+    pub async fn avif_bucket_name() -> String {
+        Self::get(keys::AVIF_BUCKET_NAME, "").await
+    }
+
+    pub async fn r2_access_key_id() -> String {
+        Self::get(keys::R2_ACCESS_KEY_ID, "").await
+    }
+
+    pub async fn r2_secret_access_key() -> String {
+        Self::get(keys::R2_SECRET_ACCESS_KEY, "").await
+    }
+
+    pub async fn r2_region() -> String {
+        Self::get(keys::R2_REGION, DEFAULT_R2_REGION).await
+    }
+
+    pub async fn r2_endpoint_url() -> String {
+        Self::get(keys::R2_ENDPOINT_URL, "").await
+    }
+
+    pub async fn r2_bucket_name() -> String {
+        Self::get(keys::R2_BUCKET_NAME, "").await
+    }
+
+    pub async fn local_base_url() -> String {
+        Self::get(keys::LOCAL_BASE_URL, "").await
+    }
+
+    pub async fn r2_base_url() -> String {
+        Self::get(keys::R2_BASE_URL, "").await
+    }
+
+    pub async fn get_app_settings() -> AppSettings {
+        AppSettings {
+            upload_max_size: Self::max_upload_size().await,
+            allow_registration: Self::allow_registration().await,
+            site_name: Self::site_name().await,
+            allow_everyone_upload: Self::allow_everyone_upload().await,
+            local_base_url: Self::local_base_url().await,
+            r2_base_url: Self::r2_base_url().await,
+        }
+    }
+
+    pub async fn update_batch(db: &DatabaseConnection, new_settings: &AppSettings) -> Result<()> {
+        let json_value = serde_json::to_value(new_settings)?;
+        let mut models = Vec::new();
+
+        if let Value::Object(map) = json_value {
+            for (k, v) in map {
+                let val_str = match v {
+                    Value::String(s) => s,
+                    Value::Bool(b) => b.to_string(),
+                    Value::Number(n) => n.to_string(),
+                    _ => v.to_string(),
+                };
+
+                SETTINGS_CACHE
+                    .write()
+                    .await
+                    .insert(k.clone(), val_str.to_string());
+
+                models.push(settings::ActiveModel {
+                    key: Set(k),
+                    value: Set(val_str),
+                    ..Default::default()
+                });
+            }
+        }
+
+        settings::Entity::insert_many(models)
+            .on_conflict(
+                OnConflict::column(settings::Column::Key)
+                    .update_column(settings::Column::Value)
+                    .to_owned(),
+            )
+            .exec(db)
+            .await?;
+
+        Ok(())
+    }
+
+    async fn get(key: &str, default: &str) -> String {
+        let cache = SETTINGS_CACHE.read().await;
+        cache.get(key).cloned().unwrap_or(default.to_string())
+    }
+
+    async fn get_u64(key: &str, default: u64) -> u64 {
+        Self::get(key, &default.to_string())
+            .await
+            .parse()
+            .unwrap_or(default)
+    }
+
+    async fn get_bool(key: &str, default: bool) -> bool {
+        Self::get(key, &default.to_string())
+            .await
+            .parse()
+            .unwrap_or(default)
+    }
+
+    pub async fn set(db: &DatabaseConnection, key: &str, value: &str) -> Result<()> {
+        let model = settings::ActiveModel {
+            key: Set(key.to_string()),
+            value: Set(value.to_string()),
+            ..Default::default()
+        };
+
+        settings::Entity::insert(model)
+            .on_conflict(
+                OnConflict::column(settings::Column::Key)
+                    .update_column(settings::Column::Value)
+                    .to_owned(),
+            )
+            .exec(db)
+            .await?;
+
+        let mut cache = SETTINGS_CACHE.write().await;
+        cache.insert(key.to_string(), value.to_string());
+
+        Ok(())
+    }
+}
