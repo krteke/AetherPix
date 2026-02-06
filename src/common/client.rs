@@ -34,9 +34,9 @@ pub async fn init_garage(ctx: &AppContext) {
 
     let origin_bucket_name = SettingsService::origin_bucket_name().await;
     let preview_bucket_name = SettingsService::preview_bucket_name().await;
-    let webp_bucket_name = SettingsService::webp_bucket_name().await;
+    let avif_bucket_name = SettingsService::avif_bucket_name().await;
     let s3_client =
-        Arc::new(S3Client::new(origin_bucket_name, preview_bucket_name, webp_bucket_name).await);
+        Arc::new(S3Client::new(origin_bucket_name, preview_bucket_name, avif_bucket_name).await);
 
     S3_GARAGE.set(s3_client).expect("初始化S3客户端失败");
 }
@@ -59,9 +59,9 @@ pub async fn init_r2(ctx: &AppContext) {
 pub async fn reload() -> Result<(), String> {
     let origin_bucket_name = SettingsService::origin_bucket_name().await;
     let preview_bucket_name = SettingsService::preview_bucket_name().await;
-    let webp_bucket_name = SettingsService::webp_bucket_name().await;
+    let avif_bucket_name = SettingsService::avif_bucket_name().await;
     let s3_client =
-        Arc::new(S3Client::new(origin_bucket_name, preview_bucket_name, webp_bucket_name).await);
+        Arc::new(S3Client::new(origin_bucket_name, preview_bucket_name, avif_bucket_name).await);
 
     S3_GARAGE
         .set(s3_client)
@@ -88,23 +88,23 @@ pub struct S3Client {
     client: Client,
     origin_bucket: String,
     preview_bucket: String,
-    webp_bucket: String,
+    avif_bucket: String,
 }
 
 pub enum Position {
     Original,
     Preview,
-    Webp,
+    Avif,
 }
 
 impl S3Client {
-    pub async fn new(origin_bucket: String, preview_bucket: String, webp_bucket: String) -> Self {
+    pub async fn new(origin_bucket: String, preview_bucket: String, avif_bucket: String) -> Self {
         let client = init_s3_client().await;
         Self {
             client,
             origin_bucket,
             preview_bucket,
-            webp_bucket,
+            avif_bucket,
         }
     }
 
@@ -112,7 +112,7 @@ impl S3Client {
         match position {
             Position::Original => &self.origin_bucket,
             Position::Preview => &self.preview_bucket,
-            Position::Webp => &self.webp_bucket,
+            Position::Avif => &self.avif_bucket,
         }
     }
 

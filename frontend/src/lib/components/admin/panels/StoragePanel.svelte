@@ -8,7 +8,7 @@
 		{ name: 'endpoint', key: 'aws_endpoint_url', edit: false, value: '' },
 		{ name: 'origin bucket', key: 'origin_bucket_name', edit: false, value: '' },
 		{ name: 'preview bucket', key: 'preview_bucket_name', edit: false, value: '' },
-		{ name: 'webp bucket', key: 'webp_bucket_name', edit: false, value: '' }
+		{ name: 'avif bucket', key: 'avif_bucket_name', edit: false, value: '' }
 	]);
 
 	const r2Storage = $state([

@@ -50,7 +50,7 @@
   created_at: "2023-11-12T12:34:56.789Z"
   updated_at: "2023-11-12T12:34:56.789Z"
 - id: 11
-  key: webp_bucket_name
-  value: webp-test
+  key: avif_bucket_name
+  value: avif-test
   created_at: "2023-11-12T12:34:56.789Z"
   updated_at: "2023-11-12T12:34:56.789Z"

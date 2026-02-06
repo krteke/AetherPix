@@ -3,8 +3,9 @@ use std::path::PathBuf;
 use aws_sdk_s3::primitives::ByteStream;
 use image::ImageReader;
 use loco_rs::prelude::*;
+use ravif::{Encoder, Img};
+use rgb::FromSlice;
 use serde::{Deserialize, Serialize};
-use webp::{Encoder, WebPConfig};
 
 use crate::{common::client::get_garage, controllers::upload::TempFileGuard};
 
@@ -62,19 +63,19 @@ impl BackgroundWorker<WorkerArgs> for Worker {
         let preview_name = args.preview_key;
 
         let result = async move {
-            let (thumbnail_data, webp_data) =
+            let (thumbnail_data, avif_data) =
                 tokio::task::spawn_blocking(move || process_thumbnail(tmp_file_path, args.quality))
                     .await
                     .map_err(|e| e.to_string())?
                     .map_err(|e| e.to_string())?;
             let body = ByteStream::from(thumbnail_data);
-            let webp_body = ByteStream::from(webp_data);
+            let avif_body = ByteStream::from(avif_data);
 
             client
                 .pub_object(
                     &preview_name,
                     body,
-                    "image/webp",
+                    "image/avif",
                     crate::common::client::Position::Preview,
                 )
                 .await
@@ -83,9 +84,9 @@ impl BackgroundWorker<WorkerArgs> for Worker {
             client
                 .pub_object(
                     &preview_name,
-                    webp_body,
-                    "image/webp",
-                    crate::common::client::Position::Webp,
+                    avif_body,
+                    "image/avif",
+                    crate::common::client::Position::Avif,
                 )
                 .await
                 .map_err(|e| e.to_string())
@@ -112,24 +113,31 @@ fn process_thumbnail(file_path: PathBuf, quality: u8) -> Result<(Vec<u8>, Vec<u8
         .map_err(|e| e.to_string())?;
 
     let rgba = img.to_rgba8();
-    let mut config =
-        WebPConfig::new().map_err(|_| String::from("Could not create WebP configuration"))?;
-    config.method = 6;
-    config.quality = quality as f32;
-    let webp_img = Encoder::from_rgba(rgba.as_raw(), rgba.width(), rgba.height())
-        .encode_advanced(&config)
-        .map_err(|e| format!("Failed to encode WebP image: {:#?}", e))?
-        .to_vec();
+    let pixels = rgba.as_raw().as_rgba();
+    let img_view = Img::new(pixels, rgba.width() as usize, rgba.height() as usize);
+    let mut encoder = Encoder::new()
+        .with_speed(6)
+        .with_quality(quality as f32)
+        .with_alpha_quality(quality as f32);
+
+    let avif_img = encoder
+        .encode_rgba(img_view)
+        .map_err(|e| e.to_string())?
+        .avif_file;
 
     let thumbnail = img.resize(400, 400, image::imageops::FilterType::Triangle);
     let rgba = thumbnail.to_rgba8();
-    config.method = 0;
-    config.quality = 80.0;
+    let pixels = rgba.as_raw().as_rgba();
+    let img_view = Img::new(pixels, rgba.width() as usize, rgba.height() as usize);
+    encoder = encoder
+        .with_speed(10)
+        .with_quality(90.0)
+        .with_alpha_quality(90.0);
 
-    let thumb = Encoder::from_rgba(rgba.as_raw(), rgba.width(), rgba.height())
-        .encode_advanced(&config)
-        .map_err(|e| format!("Failed to encode WebP image: {:#?}", e))?
-        .to_vec();
+    let thumb = encoder
+        .encode_rgba(img_view)
+        .map_err(|e| e.to_string())?
+        .avif_file;
 
-    Ok((thumb, webp_img))
+    Ok((thumb, avif_img))
 }

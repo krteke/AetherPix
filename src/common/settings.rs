@@ -27,7 +27,7 @@ mod keys {
 
     pub const ORIGIN_BUCKET_NAME: &str = "origin_bucket_name";
     pub const PREVIEW_BUCKET_NAME: &str = "preview_bucket_name";
-    pub const WEBP_BUCKET_NAME: &str = "webp_bucket_name";
+    pub const AVIF_BUCKET_NAME: &str = "avif_bucket_name";
 
     pub const DEFAULT_REGION: &str = "garage";
 
@@ -95,8 +95,8 @@ impl SettingsService {
         Self::get(keys::PREVIEW_BUCKET_NAME, "").await
     }
 
-    pub async fn webp_bucket_name() -> String {
-        Self::get(keys::WEBP_BUCKET_NAME, "").await
+    pub async fn avif_bucket_name() -> String {
+        Self::get(keys::AVIF_BUCKET_NAME, "").await
     }
 
     pub async fn r2_access_key_id() -> String {
